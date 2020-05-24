@@ -1,7 +1,6 @@
 #ifndef IVANP_CONTAINERS_CONCEPTS_HH
 #define IVANP_CONTAINERS_CONCEPTS_HH
 
-#include <tuple>
 #include <array>
 #include <concepts>
 
@@ -54,12 +53,12 @@ template <typename F, typename... Args>
 concept Invocable = std::is_invocable_v<F,Args...>;
 
 template <typename F, typename C>
-concept InvocableWithElement =
+concept InvocableForElements =
   ( Iterable<C> && Invocable<F,
       decltype(*std::begin(std::declval<C>()))>
   ) ||
   ( Tuple<C> && is_for_each_element<C,
-      bind_first_param<std::is_invocable,F>::template type >::value
+      bind_first_param<std::is_invocable,F>::template type >
   );
 
 } // end namespace containers

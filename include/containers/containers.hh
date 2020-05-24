@@ -7,21 +7,21 @@
 
 namespace ivanp::containers {
 
-template <List C, typename F>
-inline void map(C&& c, F&& f) requires InvocableWithElement<F,C> {
-  for (const auto& x : c) std::invoke(f,x);
-  // TODO: move correctly
+template <List L, typename F>
+inline void map(L&& l, F&& f) requires InvocableForElements<F,L> {
+  for (const auto& x : l) std::invoke(f,x);
+  // TODO: forward correctly
 }
 
-template <Tuple C, typename F>
-inline void map(C&& c, F&& f) requires InvocableWithElement<F,C> {
+template <Tuple T, typename F>
+inline void map(T&& t, F&& f) requires InvocableForElements<F,T> {
   [&]<size_t... I>(std::index_sequence<I...>) {
-    ( std::invoke(f,std::get<I>(c)), ... );
-  }(std::make_index_sequence<std::tuple_size_v<C>>{});
+    ( std::invoke(f,std::get<I>(t)), ... );
+  }(tuple_index_sequence<T>{});
 }
 
 template <Container C, typename F>
-inline void operator|(C&& c, F&& f) requires InvocableWithElement<F,C> {
+inline void operator|(C&& c, F&& f) requires InvocableForElements<F,C> {
   return map(std::forward<C>(c),std::forward<F>(f));
 }
 
