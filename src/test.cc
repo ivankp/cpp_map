@@ -62,8 +62,8 @@ int main(int argc, char* argv[]) {
   } | &std::string::size;
 
   TEST(( \
-    std::tuple{vec.begin(),vec.end()} \
-    % std::distance<decltype(vec.begin())> \
+    std::distance<decltype(vec.begin())> \
+    % std::tuple{vec.begin(),vec.end()} \
   ))
 
   // std::array<std::string,2> {

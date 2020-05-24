@@ -9,14 +9,14 @@ namespace ivanp::containers {
 
 template <List L, typename F>
 inline void map(L&& l, F&& f) requires InvocableForElements<F,L> {
-  for (const auto& x : l) std::invoke(f,x);
+  for (const auto& x : l) std::invoke(std::forward<F>(f),x);
   // TODO: forward correctly
 }
 
 template <Tuple T, typename F>
 inline void map(T&& t, F&& f) requires InvocableForElements<F,T> {
   [&]<size_t... I>(std::index_sequence<I...>) {
-    ( std::invoke(f,std::get<I>(t)), ... );
+    ( std::invoke(std::forward<F>(f),std::get<I>(std::forward<T>(t))), ... );
   }(tuple_index_sequence<T>{});
 }
 
@@ -26,7 +26,7 @@ inline void operator|(C&& c, F&& f) requires InvocableForElements<F,C> {
 }
 
 template <Tuple T, typename F>
-inline constexpr decltype(auto) operator%(T&& t, F&& f) {
+inline constexpr decltype(auto) operator%(F&& f, T&& t) {
   return std::apply(std::forward<F>(f),std::forward<T>(t));
 }
 
