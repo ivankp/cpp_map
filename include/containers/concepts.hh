@@ -1,0 +1,67 @@
+#ifndef IVANP_CONTAINERS_CONCEPTS_HH
+#define IVANP_CONTAINERS_CONCEPTS_HH
+
+#include <tuple>
+#include <array>
+#include <concepts>
+
+#include <containers/traits.hh>
+
+namespace ivanp::containers {
+
+template <auto> struct require_constant;
+
+template <typename T>
+concept Incrementable =
+  requires(T& a) {
+    ++a;
+  };
+
+template <typename T>
+concept Iterable =
+  requires(T& a) {
+    std::begin(a) != std::end(a);
+    requires Incrementable<decltype(std::begin(a))>;
+  };
+
+template <typename T>
+concept Sizable =
+  requires(T& a) {
+    { std::size(a) } -> std::convertible_to<std::size_t>;
+  };
+
+template <typename T>
+concept ConstSizable =
+// TODO: isn't working
+  requires {
+    { T::size() } -> std::convertible_to<std::size_t>;
+    typename require_constant<T::size()>;
+  };
+
+template <typename T>
+concept List = Iterable<T> && Sizable<T>;
+
+template <typename T>
+concept Tuple =
+  requires {
+    { std::tuple_size<T>::value } -> std::convertible_to<std::size_t>;
+  };
+
+template <typename T>
+concept Container = List<T> || Tuple<T>;
+
+template <typename F, typename... Args>
+concept Invocable = std::is_invocable_v<F,Args...>;
+
+template <typename F, typename C>
+concept InvocableWithElement =
+  ( Iterable<C> && Invocable<F,
+      decltype(*std::begin(std::declval<C>()))>
+  ) ||
+  ( Tuple<C> && is_for_each_element<C,
+      bind_first_param<std::is_invocable,F>::template type >::value
+  );
+
+} // end namespace containers
+
+#endif
