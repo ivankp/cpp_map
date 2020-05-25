@@ -103,4 +103,14 @@ int main(int argc, char* argv[]) {
   show_type(std::pair<std::string,std::string_view> {
     "hello", "world"
   } | [](auto s) -> decltype(s) { return { s.data(), 1 }; });
+
+  show_type(std::pair { 0, 1 }
+    | [&](auto i) { return vec[i]; });
+  show_type(std::pair { 0, 1 }
+    | [&](auto i) -> decltype(auto) { return vec[i]; });
+
+  show_type(std::pair { 0, 1 }
+    || [&](auto i) { return vec[i]; });
+  show_type(std::pair { 0, 1 }
+    || [&](auto i) -> decltype(auto) { return vec[i]; });
 }
