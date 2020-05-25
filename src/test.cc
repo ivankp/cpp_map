@@ -4,6 +4,7 @@
 #include <string>
 #include <iterator>
 #include <cstring>
+#include <cstdio>
 
 #include "containers/containers.hh"
 
@@ -47,7 +48,7 @@ int main(int argc, char* argv[]) {
   TEST(my_size(c_arr))
   TEST(my_size(std::initializer_list{1,2,3}))
 
-  std::vector vec { 7,8,9 };
+  std::vector vec { "vector", "test" };
 
   // TEST(ConstSizable<decltype(int_arr)>)
   // TEST(ConstSizable<decltype(c_arr)>)
@@ -56,10 +57,15 @@ int main(int argc, char* argv[]) {
 
   // [](int (&a)[]) { TEST(std::size(a)); }(c_arr);
 
-  vec | [](float i) { cout << i << endl; };
+  const char* cstrs [] { "char*", "array" };
+  // cstrs | printf; // doesn't work
+  map(cstrs,printf);
+
+  vec | printf;
+  cout << '\n';
   // auto t1 = // test void return
   std::tuple(1,'a',"bc") | [](const auto& x) {
-    cout << x << endl;
+    cout << x << '\n';
     // if constexpr (
     //   std::is_same_v<std::decay_t<decltype(x)>,int> ||
     //   std::is_same_v<std::decay_t<decltype(x)>,char> ||
@@ -76,14 +82,25 @@ int main(int argc, char* argv[]) {
   cout << '\n';
 
   TEST(( \
-    std::tuple{vec.begin(),vec.end()} \
+    std::make_pair(vec.begin(),vec.end()) \
     % std::distance<decltype(vec.begin())> \
   ))
 
-  map(std::tuple{"hello", "world"},strlen)
-  % [](auto a, auto b){ cout << a << " + " << b << " = " << (a+b) << endl; };
+  ( std::tuple{"hello", "world"} | strlen | [](auto x) { return x+1; } )
+  % [](auto a, auto b){ cout << a << " + " << b << " = " << (a+b) << '\n'; };
 
-  // std::array<std::string,2> {
-  //   "hello", "world"
-  // } | &std::string::size;
+  auto show_type = [](const auto&) { cout << __PRETTY_FUNCTION__ << '\n'; };
+
+  show_type(std::pair<std::string,std::string> {
+    "hello", "world"
+  } | &std::string::size);
+  show_type(std::array<std::string,2> {
+    "hello", "world"
+  } | &std::string::size);
+  show_type(std::pair<std::string,std::string_view> {
+    "hello", "world"
+  } | [](const auto& s){ return std::size(s); });
+  show_type(std::pair<std::string,std::string_view> {
+    "hello", "world"
+  } | [](auto s) -> decltype(s) { return { s.data(), 1 }; });
 }

@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 #include <tuple>
+#include <array>
 
 namespace ivanp::containers {
 
@@ -26,6 +27,15 @@ using returns_void = std::is_void< std::invoke_result_t<F,T...> >;
 
 template <typename F, typename... T>
 using returns_not_void = std::negation< returns_void<F,T...> >;
+
+template <typename T>
+static constexpr bool same_tuple_types =
+[]<size_t I0,size_t... I>(std::index_sequence<I0,I...>) {
+  return (std::is_same<
+    std::tuple_element_t<I0,T>,
+    std::tuple_element_t<I,T>
+  >::value && ...);
+}(tuple_index_sequence<T>{});
 
 } // end namespace containers
 

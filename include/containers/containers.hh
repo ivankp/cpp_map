@@ -14,31 +14,35 @@ template <Iterable C, typename F>
 inline void map(C&& c, F&& f)
 requires InvocableForElementsOfIterable<F,C>
 && ReturnsVoidForElementsOfIterable<F,C>
+&& (!Tuple<C>)
 {
   for (auto&& x : c)
     std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) );
-}
-
-template <Tuple C, typename F>
-inline void map(C&& c, F&& f) requires InvocableForElementsOfTuple<F,C> {
-  std::apply([&](auto&&... x){
-    ( std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) ), ... );
-  },c);
 }
 
 template <Iterable C, typename F>
 inline decltype(auto) map(C&& c, F&& f)
 requires InvocableForElementsOfIterable<F,C>
 && (!ReturnsVoidForElementsOfIterable<F,C>)
+&& (!Tuple<C>)
 {
   std::vector<std::invoke_result_t<
     F, decltype(*std::begin(std::declval<C&>())) >> out;
   if constexpr (Sizable<C>)
-    out.reserve(c.size());
+    out.reserve(std::size(c));
   for (auto&& x : c)
     out.push_back(
       std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) ) );
   return out;
+}
+
+template <Tuple C, typename F>
+inline void map(C&& c, F&& f)
+requires InvocableForElementsOfTuple<F,C>
+{
+  std::apply([&](auto&&... x){
+    ( std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) ), ... );
+  },c);
 }
 
 template <Tuple C, typename F>
@@ -47,9 +51,15 @@ requires InvocableForElementsOfTuple<F,C>
 && (!ReturnsVoidForElementsOfTuple<F,C>)
 {
   return std::apply([&](auto&&... x){
-    return std::tuple {
-      std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) )...
-    };
+    if constexpr (same_tuple_types<C>) {
+      return std::array {
+        std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) )...
+      };
+    } else {
+      return std::tuple {
+        std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) )...
+      };
+    }
   },c);
 }
 

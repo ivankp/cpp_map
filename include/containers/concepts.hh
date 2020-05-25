@@ -1,7 +1,6 @@
 #ifndef IVANP_CONTAINERS_CONCEPTS_HH
 #define IVANP_CONTAINERS_CONCEPTS_HH
 
-#include <array>
 #include <concepts>
 
 #include <containers/traits.hh>
