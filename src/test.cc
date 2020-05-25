@@ -13,6 +13,7 @@ using std::cout;
 using std::endl;
 
 using namespace ivanp::containers;
+using namespace ivanp::containers::operators;
 
 template <List T>
 auto my_list_size(const T& x) {

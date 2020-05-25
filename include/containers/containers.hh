@@ -8,17 +8,19 @@
 namespace ivanp::containers {
 
 template <List L, typename F>
-inline void map(L&& l, F&& f) requires InvocableForElements<F,L> {
-  for (const auto& x : l) std::invoke(std::forward<F>(f),x);
-  // TODO: forward correctly
+inline void map(L&& l, F&& f) requires InvocableForElementsOfIterable<F,L> {
+  for (auto&& x : l)
+    std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) );
 }
 
 template <Tuple T, typename F>
-inline void map(T&& t, F&& f) requires InvocableForElements<F,T> {
-  [&]<size_t... I>(std::index_sequence<I...>) {
-    ( std::invoke(std::forward<F>(f),std::get<I>(std::forward<T>(t))), ... );
-  }(tuple_index_sequence<T>{});
+inline void map(T&& t, F&& f) requires InvocableForElementsOfTuple<F,T> {
+  std::apply([&](auto&&... x){
+    ( std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) ), ... );
+  },t);
 }
+
+namespace operators { // --------------------------------------------
 
 template <Container C, typename F>
 inline void operator|(C&& c, F&& f) requires InvocableForElements<F,C> {
@@ -30,7 +32,7 @@ inline constexpr decltype(auto) operator%(F&& f, T&& t) {
   return std::apply(std::forward<F>(f),std::forward<T>(t));
 }
 
-
+} // end namespace operators
 } // end namespace containers
 
 #endif

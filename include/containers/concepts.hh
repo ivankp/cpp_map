@@ -53,13 +53,18 @@ template <typename F, typename... Args>
 concept Invocable = std::is_invocable_v<F,Args...>;
 
 template <typename F, typename C>
+concept InvocableForElementsOfIterable =
+  Invocable<F, decltype(*std::begin(std::declval<C>()))>;
+
+template <typename F, typename C>
+concept InvocableForElementsOfTuple =
+  is_for_each_element<C,
+    bind_first_param<std::is_invocable,F>::template type >;
+
+template <typename F, typename C>
 concept InvocableForElements =
-  ( Iterable<C> && Invocable<F,
-      decltype(*std::begin(std::declval<C>()))>
-  ) ||
-  ( Tuple<C> && is_for_each_element<C,
-      bind_first_param<std::is_invocable,F>::template type >
-  );
+  ( Iterable<C> && InvocableForElementsOfIterable<F,C> ) ||
+  ( Tuple<C> && InvocableForElementsOfTuple<F,C> );
 
 } // end namespace containers
 
