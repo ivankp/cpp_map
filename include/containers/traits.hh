@@ -1,6 +1,7 @@
 #ifndef IVANP_CONTAINERS_TRAITS_HH
 #define IVANP_CONTAINERS_TRAITS_HH
 
+#include <type_traits>
 #include <utility>
 #include <tuple>
 
@@ -19,6 +20,12 @@ static constexpr bool is_for_each_element =
 []<size_t... I>(std::index_sequence<I...>) {
   return (Pred<std::tuple_element_t<I,T>>::value && ...);
 }(tuple_index_sequence<T>{});
+
+template <typename F, typename... T>
+using returns_void = std::is_void< std::invoke_result_t<F,T...> >;
+
+template <typename F, typename... T>
+using returns_not_void = std::negation< returns_void<F,T...> >;
 
 } // end namespace containers
 

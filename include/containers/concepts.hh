@@ -47,14 +47,14 @@ concept Tuple =
   };
 
 template <typename T>
-concept Container = List<T> || Tuple<T>;
+concept Container = Iterable<T> || Tuple<T>;
 
 template <typename F, typename... Args>
 concept Invocable = std::is_invocable_v<F,Args...>;
 
 template <typename F, typename C>
 concept InvocableForElementsOfIterable =
-  Invocable<F, decltype(*std::begin(std::declval<C>()))>;
+  Invocable<F, decltype(*std::begin(std::declval<C&>()))>;
 
 template <typename F, typename C>
 concept InvocableForElementsOfTuple =
@@ -65,6 +65,15 @@ template <typename F, typename C>
 concept InvocableForElements =
   ( Iterable<C> && InvocableForElementsOfIterable<F,C> ) ||
   ( Tuple<C> && InvocableForElementsOfTuple<F,C> );
+
+template <typename F, typename C>
+concept ReturnsVoidForElementsOfIterable =
+  returns_void<F,decltype(*std::begin(std::declval<C&>()))>::value;
+
+template <typename F, typename C>
+concept ReturnsVoidForElementsOfTuple =
+  !is_for_each_element<C,
+    bind_first_param<returns_not_void,F>::template type >;
 
 } // end namespace containers
 

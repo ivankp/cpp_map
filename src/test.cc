@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <iterator>
+#include <cstring>
 
 #include "containers/containers.hh"
 
@@ -56,16 +57,31 @@ int main(int argc, char* argv[]) {
   // [](int (&a)[]) { TEST(std::size(a)); }(c_arr);
 
   vec | [](float i) { cout << i << endl; };
-  std::tuple(1,'a',"bc") | [](const auto& x) { cout << x << endl; };
+  // auto t1 = // test void return
+  std::tuple(1,'a',"bc") | [](const auto& x) {
+    cout << x << endl;
+    // if constexpr (
+    //   std::is_same_v<std::decay_t<decltype(x)>,int> ||
+    //   std::is_same_v<std::decay_t<decltype(x)>,char> ||
+    //   std::is_same_v<std::decay_t<decltype(x)>,const char*>
+    // ) return x;
+  };
 
-  std::vector<std::string> {
-    "hello", "world"
-  } | &std::string::size;
+  for (auto x : map({ "hello", "world" },strlen)) cout << ' ' << x;
+  cout << '\n';
+
+  for (auto x : std::vector<std::string> {
+      "hello", "world"
+    } | &std::string::size) cout << ' ' << x;
+  cout << '\n';
 
   TEST(( \
-    std::distance<decltype(vec.begin())> \
-    % std::tuple{vec.begin(),vec.end()} \
+    std::tuple{vec.begin(),vec.end()} \
+    % std::distance<decltype(vec.begin())> \
   ))
+
+  map(std::tuple{"hello", "world"},strlen)
+  % [](auto a, auto b){ cout << a << " + " << b << " = " << (a+b) << endl; };
 
   // std::array<std::string,2> {
   //   "hello", "world"
