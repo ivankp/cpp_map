@@ -11,17 +11,15 @@ namespace ivanp::containers {
 namespace impl {
 
 template <bool Forward, Iterable C, typename F>
-inline void map(C&& c, F&& f)
 requires ReturnsVoidForElementsOfIterable<F&&,C> && (!Tuple<C>)
-{
+inline void map(C&& c, F&& f) {
   for (auto&& x : c)
     std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) );
 }
 
 template <bool Forward, Iterable C, typename F>
-inline decltype(auto) map(C&& c, F&& f)
 requires (!ReturnsVoidForElementsOfIterable<F&&,C>) && (!Tuple<C>)
-{
+inline decltype(auto) map(C&& c, F&& f) {
   std::vector<std::invoke_result_t<
     F, decltype(*std::begin(std::declval<C&>())) >> out;
   if constexpr (Sizable<C>)
@@ -33,24 +31,26 @@ requires (!ReturnsVoidForElementsOfIterable<F&&,C>) && (!Tuple<C>)
 }
 
 template <bool Forward, Tuple C, typename F>
-inline void map(C&& c, F&& f)
 requires ReturnsVoidForElementsOfTuple<F&&,C>
-{
+inline void map(C&& c, F&& f) {
   std::apply([&](auto&&... x){
     ( std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) ), ... );
   },c);
 }
 
 template <bool Forward, Tuple C, typename F>
-inline decltype(auto) map(C&& c, F&& f)
 requires (!ReturnsVoidForElementsOfTuple<F&&,C>)
-{
+inline decltype(auto) map(C&& c, F&& f) {
   return std::apply([&](auto&&... x){
-    if constexpr (
-      elements_transform_to_same<
-        C, bind_first_param<std::invoke_result_t,F&&>::template type>
-      && (!Forward || !std::is_reference_v<
-        std::invoke_result_t<F&&,std::tuple_element_t<0,C>>>)
+    if constexpr ( Forward
+      ? elements_transform_to_same<C,
+          compose<std::remove_cv_t, curry<std::invoke_result_t,F&&> >
+        > &&
+        !std::is_reference_v<
+          std::invoke_result_t<F&&,std::tuple_element_t<0,C>>>
+      : elements_transform_to_same<C,
+          compose<std::decay_t, curry<std::invoke_result_t,F&&> >
+        >
     ) {
       return std::array {
         std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) )...
@@ -72,46 +72,40 @@ requires (!ReturnsVoidForElementsOfTuple<F&&,C>)
 } // end namespace impl
 
 template <Container C, typename F>
-inline decltype(auto) map(C&& c, F&& f)
 requires InvocableForElements<F&&,C>
-{
+inline decltype(auto) map(C&& c, F&& f) {
   return impl::map<0>(std::forward<C>(c),std::forward<F>(f));
 }
 
 template <typename T, typename F>
-inline decltype(auto) map(std::initializer_list<T> c, F&& f)
 requires Invocable<F&&,T>
-{
+inline decltype(auto) map(std::initializer_list<T> c, F&& f) {
   return impl::map<0>(c,std::forward<F>(f));
 }
 
 template <Container C, typename F>
-inline decltype(auto) map_forward(C&& c, F&& f)
 requires InvocableForElements<F&&,C>
-{
+inline decltype(auto) map_forward(C&& c, F&& f) {
   return impl::map<1>(std::forward<C>(c),std::forward<F>(f));
 }
 
 template <typename T, typename F>
-inline decltype(auto) map_forward(std::initializer_list<T> c, F&& f)
 requires Invocable<F&&,T>
-{
+inline decltype(auto) map_forward(std::initializer_list<T> c, F&& f) {
   return impl::map<1>(c,std::forward<F>(f));
 }
 
 namespace operators { // --------------------------------------------
 
 template <Container C, typename F>
-inline decltype(auto) operator|(C&& c, F&& f)
 requires InvocableForElements<F&&,C>
-{
+inline decltype(auto) operator|(C&& c, F&& f) {
   return impl::map<0>(std::forward<C>(c),std::forward<F>(f));
 }
 
 template <Container C, typename F>
-inline decltype(auto) operator||(C&& c, F&& f)
 requires InvocableForElements<F&&,C>
-{
+inline decltype(auto) operator||(C&& c, F&& f) {
   return impl::map<1>(std::forward<C>(c),std::forward<F>(f));
 }
 

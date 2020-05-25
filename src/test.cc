@@ -113,4 +113,9 @@ int main(int argc, char* argv[]) {
     || [&](auto i) { return vec[i]; });
   show_type(std::pair { 0, 1 }
     || [&](auto i) -> decltype(auto) { return vec[i]; });
+
+  int a1[1] { };
+  int a2[2] { };
+  show_type(std::tuple{a1,a2});
+  show_type(std::array{a1,a2});
 }

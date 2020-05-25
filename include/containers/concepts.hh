@@ -57,8 +57,7 @@ concept InvocableForElementsOfIterable =
 
 template <typename F, typename C>
 concept InvocableForElementsOfTuple =
-  is_for_each_element<C,
-    bind_first_param<std::is_invocable,F>::template type >;
+  is_for_each_element<C, curry<std::is_invocable,F>>;
 
 template <typename F, typename C>
 concept InvocableForElements =
@@ -71,8 +70,7 @@ concept ReturnsVoidForElementsOfIterable =
 
 template <typename F, typename C>
 concept ReturnsVoidForElementsOfTuple =
-  !is_for_each_element<C,
-    bind_first_param<returns_not_void,F>::template type >;
+  !is_for_each_element<C, curry<returns_not_void,F>>;
 
 } // end namespace containers
 
