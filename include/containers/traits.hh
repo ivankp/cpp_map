@@ -16,11 +16,6 @@ struct curry {
 template <typename Trait, typename... Args>
 using apply_type = typename Trait::type<Args...>;
 
-// template <template<typename> typename A, template<typename...> typename B>
-// struct compose {
-//   template <typename... T> using type = A<B<T...>>;
-// };
-
 template <template<typename> typename A, typename B>
 struct compose {
   template <typename... T> using type = A<apply_type<B,T...>>;

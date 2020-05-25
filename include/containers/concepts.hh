@@ -64,14 +64,6 @@ concept InvocableForElements =
   ( Iterable<C> && InvocableForElementsOfIterable<F,C> ) ||
   ( Tuple<C> && InvocableForElementsOfTuple<F,C> );
 
-template <typename F, typename C>
-concept ReturnsVoidForElementsOfIterable =
-  returns_void<F,decltype(*std::begin(std::declval<C&>()))>::value;
-
-template <typename F, typename C>
-concept ReturnsVoidForElementsOfTuple =
-  !is_for_each_element<C, curry<returns_not_void,F>>;
-
 } // end namespace containers
 
 #endif
