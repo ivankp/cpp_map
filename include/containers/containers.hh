@@ -47,13 +47,13 @@ inline decltype(auto) map(C&& c, F&& f) {
     }
   } else { // not a tuple
     if constexpr (
-      returns_void<F&&,decltype(*std::begin(std::declval<C&>()))>::value
+      returns_void<F&&,decltype(*std::begin(c))>::value
     ) { // returns void
       for (auto&& x : c)
         std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) );
     } else { // returns not void
       std::vector<std::decay_t<std::invoke_result_t<
-        F, decltype(*std::begin(std::declval<C&>())) >>> out;
+        F, decltype(*std::begin(c)) >>> out;
       if constexpr (Sizable<C>)
         out.reserve(std::size(c));
       for (auto&& x : c)
