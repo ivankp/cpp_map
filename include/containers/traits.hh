@@ -38,6 +38,12 @@ static constexpr bool elements_transform_to_same =
   > && ...);
 }(tuple_index_sequence<T>{});
 
+template <typename F, typename T>
+static constexpr bool can_apply =
+  []<size_t... I>(std::index_sequence<I...>) {
+    return std::is_invocable_v<F,std::tuple_element_t<I,T>...>;
+  }(tuple_index_sequence<T>{});
+
 template <typename F, typename... T>
 using returns_void = std::is_void< std::invoke_result_t<F,T...> >;
 

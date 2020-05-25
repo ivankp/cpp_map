@@ -51,6 +51,9 @@ concept List = Iterable<T> && Sizable<T>;
 template <typename F, typename... Args>
 concept Invocable = std::is_invocable_v<F,Args...>;
 
+template <typename F, typename T>
+concept Applyable = can_apply<F,T>;
+
 template <typename F, typename C>
 concept InvocableForElementsOfIterable =
   Invocable<F, decltype(*std::begin(std::declval<C&>()))>;

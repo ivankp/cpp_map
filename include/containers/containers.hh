@@ -11,7 +11,7 @@ namespace ivanp::containers {
 
 namespace impl {
 
-template <bool Forward, Container C, typename F>
+template <bool Forward, typename C, typename F>
 inline decltype(auto) map(C&& c, F&& f) {
   if constexpr (Tuple<C>) { // is a tuple
     if constexpr (
@@ -105,6 +105,7 @@ inline decltype(auto) operator||(C&& c, F&& f) {
 }
 
 template <Tuple C, typename F>
+requires Applyable<F&&,C>
 inline constexpr decltype(auto) operator%(C&& c, F&& f) {
   return std::apply(std::forward<F>(f),std::forward<C>(c));
 }
