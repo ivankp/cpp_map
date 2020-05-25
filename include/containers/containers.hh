@@ -21,15 +21,12 @@ inline decltype(auto) map(C&& c, F&& f) {
       },c);
     } else { // returns not void
       return std::apply([&](auto&&... x){
-        if constexpr ( Forward
-          ? elements_transform_to_same<C,
-              compose<std::remove_cv_t, curry<std::invoke_result_t,F&&> >
-            > &&
-            !std::is_reference_v<
-              std::invoke_result_t<F&&,std::tuple_element_t<0,C>>>
-          : elements_transform_to_same<C,
-              compose<std::decay_t, curry<std::invoke_result_t,F&&> >
-            >
+        if constexpr (
+          elements_transform_to_same<C,
+            compose<std::decay_t, curry<std::invoke_result_t,F&&> > >
+          && !( Forward &&
+            std::is_reference_v<
+              std::invoke_result_t<F&&,std::tuple_element_t<0,C>>> )
         ) {
           return std::array { std::invoke(
             std::forward<F>(f), std::forward<decltype(x)>(x) )...
