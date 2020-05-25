@@ -2,6 +2,7 @@
 #define IVANP_CONTAINERS_HH
 
 #include <functional>
+#include <array>
 #include <vector>
 
 #include <containers/concepts.hh>
@@ -51,8 +52,8 @@ inline decltype(auto) map(C&& c, F&& f) {
       for (auto&& x : c)
         std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) );
     } else { // returns not void
-      std::vector<std::invoke_result_t<
-        F, decltype(*std::begin(std::declval<C&>())) >> out;
+      std::vector<std::decay_t<std::invoke_result_t<
+        F, decltype(*std::begin(std::declval<C&>())) >>> out;
       if constexpr (Sizable<C>)
         out.reserve(std::size(c));
       for (auto&& x : c)

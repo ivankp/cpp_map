@@ -65,13 +65,14 @@ int main(int argc, char* argv[]) {
   cout << '\n';
   // auto t1 = // test void return
   std::tuple(1,'a',"bc") | [](const auto& x) {
-    cout << x << '\n';
+    cout << ' ' << x;
     // if constexpr (
     //   std::is_same_v<std::decay_t<decltype(x)>,int> ||
     //   std::is_same_v<std::decay_t<decltype(x)>,char> ||
     //   std::is_same_v<std::decay_t<decltype(x)>,const char*>
     // ) return x;
   };
+  cout << '\n';
 
   for (auto x : map({ "hello", "world" },strlen)) cout << ' ' << x;
   cout << '\n';
@@ -118,4 +119,7 @@ int main(int argc, char* argv[]) {
   int a2[2] { };
   show_type(std::tuple{a1,a2});
   show_type(std::array{a1,a2});
+
+  show_type(std::vector { 0, 1 } // tests vector element type
+    | [&](auto i) -> decltype(auto) { return vec[i]; });
 }

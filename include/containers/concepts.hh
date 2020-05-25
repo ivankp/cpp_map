@@ -23,6 +23,15 @@ concept Iterable =
   };
 
 template <typename T>
+concept Tuple =
+  requires {
+    { std::tuple_size<T>::value } -> std::convertible_to<std::size_t>;
+  };
+
+template <typename T>
+concept Container = Iterable<T> || Tuple<T>;
+
+template <typename T>
 concept Sizable =
   requires(T& a) {
     { std::size(a) } -> std::convertible_to<std::size_t>;
@@ -38,15 +47,6 @@ concept ConstSizable =
 
 template <typename T>
 concept List = Iterable<T> && Sizable<T>;
-
-template <typename T>
-concept Tuple =
-  requires {
-    { std::tuple_size<T>::value } -> std::convertible_to<std::size_t>;
-  };
-
-template <typename T>
-concept Container = Iterable<T> || Tuple<T>;
 
 template <typename F, typename... Args>
 concept Invocable = std::is_invocable_v<F,Args...>;

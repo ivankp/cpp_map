@@ -4,7 +4,6 @@
 #include <type_traits>
 #include <utility>
 #include <tuple>
-#include <array>
 
 namespace ivanp::containers {
 
