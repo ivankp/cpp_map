@@ -10,7 +10,7 @@ namespace ivanp::containers {
 
 namespace impl {
 
-template <Iterable C, typename F>
+template <bool Forward, Iterable C, typename F>
 inline void map(C&& c, F&& f)
 requires ReturnsVoidForElementsOfIterable<F&&,C> && (!Tuple<C>)
 {
@@ -18,7 +18,7 @@ requires ReturnsVoidForElementsOfIterable<F&&,C> && (!Tuple<C>)
     std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) );
 }
 
-template <Iterable C, typename F>
+template <bool Forward, Iterable C, typename F>
 inline decltype(auto) map(C&& c, F&& f)
 requires (!ReturnsVoidForElementsOfIterable<F&&,C>) && (!Tuple<C>)
 {
@@ -32,7 +32,7 @@ requires (!ReturnsVoidForElementsOfIterable<F&&,C>) && (!Tuple<C>)
   return out;
 }
 
-template <Tuple C, typename F>
+template <bool Forward, Tuple C, typename F>
 inline void map(C&& c, F&& f)
 requires ReturnsVoidForElementsOfTuple<F&&,C>
 {
@@ -41,7 +41,7 @@ requires ReturnsVoidForElementsOfTuple<F&&,C>
   },c);
 }
 
-template <Tuple C, typename F>
+template <bool Forward, Tuple C, typename F>
 inline decltype(auto) map(C&& c, F&& f)
 requires (!ReturnsVoidForElementsOfTuple<F&&,C>)
 {
@@ -49,36 +49,22 @@ requires (!ReturnsVoidForElementsOfTuple<F&&,C>)
     if constexpr (
       elements_transform_to_same<
         C, bind_first_param<std::invoke_result_t,F&&>::template type>
+      && (!Forward || !std::is_reference_v<
+        std::invoke_result_t<F&&,std::tuple_element_t<0,C>>>)
     ) {
       return std::array {
         std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) )...
       };
     } else {
-      return std::tuple {
-        std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) )...
-      };
-    }
-  },c);
-}
-
-template <Tuple C, typename F>
-inline decltype(auto) map_forward(C&& c, F&& f)
-requires (!ReturnsVoidForElementsOfTuple<F&&,C>)
-{
-  return std::apply([&](auto&&... x){
-    if constexpr (
-      elements_transform_to_same<
-        C, bind_first_param<std::invoke_result_t,F&&>::template type>
-      && !std::is_reference_v<
-        std::invoke_result_t<F&&,std::tuple_element_t<0,C>>>
-    ) {
-      return std::array {
-        std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) )...
-      };
-    } else {
-      return std::forward_as_tuple(
-        std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) )...
-      );
+      if constexpr (Forward) {
+        return std::forward_as_tuple(
+          std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) )...
+        );
+      } else {
+        return std::tuple {
+          std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) )...
+        };
+      }
     }
   },c);
 }
@@ -89,28 +75,28 @@ template <Container C, typename F>
 inline decltype(auto) map(C&& c, F&& f)
 requires InvocableForElements<F&&,C>
 {
-  return impl::map(std::forward<C>(c),std::forward<F>(f));
+  return impl::map<0>(std::forward<C>(c),std::forward<F>(f));
 }
 
 template <typename T, typename F>
 inline decltype(auto) map(std::initializer_list<T> c, F&& f)
 requires Invocable<F&&,T>
 {
-  return impl::map(c,std::forward<F>(f));
+  return impl::map<0>(c,std::forward<F>(f));
 }
 
 template <Container C, typename F>
 inline decltype(auto) map_forward(C&& c, F&& f)
 requires InvocableForElements<F&&,C>
 {
-  return impl::map_forward(std::forward<C>(c),std::forward<F>(f));
+  return impl::map<1>(std::forward<C>(c),std::forward<F>(f));
 }
 
 template <typename T, typename F>
 inline decltype(auto) map_forward(std::initializer_list<T> c, F&& f)
 requires Invocable<F&&,T>
 {
-  return impl::map_forward(c,std::forward<F>(f));
+  return impl::map<1>(c,std::forward<F>(f));
 }
 
 namespace operators { // --------------------------------------------
@@ -119,14 +105,14 @@ template <Container C, typename F>
 inline decltype(auto) operator|(C&& c, F&& f)
 requires InvocableForElements<F&&,C>
 {
-  return impl::map(std::forward<C>(c),std::forward<F>(f));
+  return impl::map<0>(std::forward<C>(c),std::forward<F>(f));
 }
 
 template <Container C, typename F>
 inline decltype(auto) operator||(C&& c, F&& f)
 requires InvocableForElements<F&&,C>
 {
-  return impl::map_forward(std::forward<C>(c),std::forward<F>(f));
+  return impl::map<1>(std::forward<C>(c),std::forward<F>(f));
 }
 
 template <Tuple C, typename F>
