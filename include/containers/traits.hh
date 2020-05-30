@@ -17,6 +17,9 @@ struct type_sequence {
   // static constexpr size_t size = sizeof...(T);
 };
 
+template <size_t I>
+using index_constant = std::integral_constant<size_t,I>;
+
 template <template<typename...> typename F, typename... A>
 struct curry {
   template <typename... T> using type = F<A...,T...>;

@@ -114,6 +114,8 @@ int main(int argc, char* argv[]) {
     || [&](auto i) { return vec[i]; });
   show_type(std::pair { 0, 1 }
     || [&](auto i) -> decltype(auto) { return vec[i]; });
+  show_type(std::pair { 0, 1 }
+    || [&](auto i) -> decltype(auto) { return std::move(vec[i]); });
 
   int a1[1] { };
   int a2[2] { };
