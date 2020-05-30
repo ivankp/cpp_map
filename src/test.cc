@@ -6,10 +6,10 @@
 #include <cstring>
 #include <cstdio>
 
-#include "containers/containers.hh"
-
 #define TEST(var) \
   std::cout << "\033[36m" #var "\033[0m = " << (var) << std::endl;
+
+#include "containers/containers.hh"
 
 using std::cout;
 using std::endl;
@@ -132,8 +132,13 @@ int main(int argc, char* argv[]) {
   map([](const auto&... x){ (cout << ... << x) << '\n'; },
     std::tuple{1,2}, std::tuple{"a","b"} );
   show_type(map(
-    [](const auto&... x) -> decltype(auto){
+    [](const auto&... x) -> decltype(auto) {
       return ((cout << ... << x) << '\n');
     },
     std::tuple{1,2}, std::tuple{"a","b"} ));
+
+  show_type(map(
+    [](auto... x){ return (... + x); }, std::array{1}, std::array{2,0} ));
+  show_type(map<flags::prefer_tuple>(
+    [](auto... x){ return (... + x); }, std::array{1}, std::array{2,0} ));
 }

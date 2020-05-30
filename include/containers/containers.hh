@@ -10,9 +10,10 @@
 
 namespace ivanp::containers {
 enum class flags {
-  none = 0,
-  forward = 1,
-  check_length = 2
+  none         = 0,
+  forward      = 1 << 0,
+  check_length = 1 << 1,
+  prefer_tuple = 1 << 2
 };
 }
 
@@ -102,33 +103,37 @@ inline decltype(auto) map(F&& f, C&&... c) {
 
   static constexpr auto ret =
     []<typename... T>(type_sequence<T...>) {
-      return (struct { bool has_void, same, refs; }) {
+      return (struct {
+        bool has_void, same, refs, constructible;
+      }) {
         (... || std::is_void_v<T>),
         are_same_v<T...>,
-        (... || std::is_reference_v<T>)
+        (... || std::is_reference_v<T>),
+        (... || std::is_constructible_v<std::decay_t<T>,T>),
       };
     }(result_types{});
 
   if constexpr ((... || Tuple<C>)) { // at least one tuple
     return [&]<size_t... I>(std::index_sequence<I...>) {
-      auto impl = [&]<size_t J>(index_constant<J>)
-        -> decltype(auto) {
-          return std::invoke(
-            std::forward<F>(f),
-            std::get<J>(std::forward<C>(c))... // TODO: get
-          );
-        };
-      if constexpr (ret.has_void)
+      auto impl = [&]<size_t J>(index_constant<J>) -> decltype(auto) {
+        return std::invoke(
+          std::forward<F>(f),
+          std::get<J>(std::forward<C>(c))... // TODO: get
+        );
+      };
+      if constexpr ( ret.has_void )
         ( ..., impl(index_constant<I>{}) );
       else if constexpr (
+        !(flags & flags::prefer_tuple) &&
+        ret.constructible &&
         ret.same && !( !!(flags & flags::forward) && ret.refs )
       )
         // TODO: enforce execution order?
         return std::array { impl(index_constant<I>{}) ... };
-      else if constexpr (!!(flags & flags::forward))
-        return std::forward_as_tuple( impl(index_constant<I>{}) ... );
-      else
+      else if constexpr ( !(flags & flags::forward) && ret.constructible )
         return std::tuple { impl(index_constant<I>{}) ... };
+      else
+        return std::forward_as_tuple( impl(index_constant<I>{}) ... );
     }(indices{});
   } else { // not a tuple
   }
@@ -139,13 +144,13 @@ inline decltype(auto) map(F&& f, C&&... c) {
 template <flags flags=flags::none, Container... C, typename F>
 requires InvocableForElements<F&&,C&&...>
 inline decltype(auto) map(F&& f, C&&... c) {
-  return impl::map<flags::forward>(std::forward<F>(f),std::forward<C>(c)...);
+  return impl::map<flags>(std::forward<F>(f),std::forward<C>(c)...);
 }
 
 template <flags flags=flags::none, typename... T, typename F>
 requires Invocable<F&&,T...>
 inline decltype(auto) map(F&& f, std::initializer_list<T>... c) {
-  return impl::map<flags::forward>(std::forward<F>(f),c...);
+  return impl::map<flags>(std::forward<F>(f),c...);
 }
 
 namespace operators { // --------------------------------------------
