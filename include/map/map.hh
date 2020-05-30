@@ -114,6 +114,7 @@ inline decltype(auto) map(F&& f, C&&... c) {
     }(result_types{});
 
   if constexpr ((... || Tuple<C>)) { // at least one tuple
+    // Note: evaluation order is sequential for list-initialization
     return [&]<size_t... I>(std::index_sequence<I...>) {
       auto impl = [&]<size_t J>(index_constant<J>) -> decltype(auto) {
         return std::invoke(
@@ -128,12 +129,18 @@ inline decltype(auto) map(F&& f, C&&... c) {
         ret.constructible &&
         ret.same && ( !(flags & flags::forward) || !ret.refs )
       )
-        // TODO: enforce execution order?
         return std::array { impl(index_constant<I>{}) ... };
       else if constexpr ( !(flags & flags::forward) && ret.constructible )
         return std::tuple { impl(index_constant<I>{}) ... };
-      else
-        return std::forward_as_tuple( impl(index_constant<I>{}) ... );
+      else {
+        // can't use std::forward_as_tuple() because the order of evaluation
+        // of function arguments is not specified
+        using return_type = decltype(
+          []<typename... T>(type_sequence<T...>) -> std::tuple<T&&...> {
+            return { };
+          }(result_types{}));
+        return return_type{ impl(index_constant<I>{}) ... };
+      }
     }(indices{});
   } else { // no tuples
   }
