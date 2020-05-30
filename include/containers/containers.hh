@@ -30,8 +30,8 @@ inline decltype(auto) map(F&& f, C&& c) {
     if constexpr (
       !is_for_each_element<C&&, curry<returns_not_void,F&&>>
     ) { // returns void
-      std::apply([&](auto&&... x){ ( std::invoke(
-        std::forward<F>(f), std::forward<decltype(x)>(x) ), ... );
+      std::apply([&](auto&&... x){ ( ..., std::invoke(
+        std::forward<F>(f), std::forward<decltype(x)>(x) ) );
       },c);
     } else { // returns not void
       return std::apply([&](auto&&... x){
