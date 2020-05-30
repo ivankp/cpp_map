@@ -6,13 +6,26 @@
 #include <vector>
 
 #include <containers/concepts.hh>
+#include <enum_class_bitmask.hh>
 
 namespace ivanp::containers {
+enum class flags {
+  none = 0,
+  forward = 1,
+  check_length = 2
+};
+}
 
+namespace ivanp {
+template <>
+constexpr bool enable_bitmask_operators<containers::flags> = true;
+}
+
+namespace ivanp::containers {
 namespace impl {
 
-template <bool Forward, typename C, typename F>
-inline decltype(auto) map(C&& c, F&& f) {
+template <flags flags, typename F, typename C>
+inline decltype(auto) map(F&& f, C&& c) {
   if constexpr (Tuple<C>) { // is a tuple
     if constexpr (
       !is_for_each_element<C, curry<returns_not_void,F&&>>
@@ -25,7 +38,7 @@ inline decltype(auto) map(C&& c, F&& f) {
         if constexpr (
           elements_transform_to_same<C,
             compose<std::decay_t, curry<std::invoke_result_t,F&&> > >
-          && !( Forward &&
+          && !( (flags & flags::forward)!=flags::none &&
             std::is_reference_v<
               std::invoke_result_t<F&&,std::tuple_element_t<0,C>>> )
         ) {
@@ -33,7 +46,7 @@ inline decltype(auto) map(C&& c, F&& f) {
             std::forward<F>(f), std::forward<decltype(x)>(x) )...
           };
         } else {
-          if constexpr (Forward) {
+          if constexpr ((flags & flags::forward) != flags::none) {
             return std::forward_as_tuple( std::invoke(
               std::forward<F>(f), std::forward<decltype(x)>(x) )...
             );
@@ -64,30 +77,23 @@ inline decltype(auto) map(C&& c, F&& f) {
   }
 }
 
+template <flags flags, typename F, typename... C>
+requires (sizeof...(C) > 1)
+inline decltype(auto) map(F&& f, C&&... c) {
+}
+
 } // end namespace impl
 
-template <Container C, typename F>
-requires InvocableForElements<F&&,C>
-inline decltype(auto) map(C&& c, F&& f) {
-  return impl::map<0>(std::forward<C>(c),std::forward<F>(f));
+template <flags flags=flags::none, Container... C, typename F>
+requires InvocableForElements<F&&,C&&...>
+inline decltype(auto) map(F&& f, C&&... c) {
+  return impl::map<flags::forward>(std::forward<F>(f),std::forward<C>(c)...);
 }
 
-template <typename T, typename F>
-requires Invocable<F&&,T>
-inline decltype(auto) map(std::initializer_list<T> c, F&& f) {
-  return impl::map<0>(c,std::forward<F>(f));
-}
-
-template <Container C, typename F>
-requires InvocableForElements<F&&,C>
-inline decltype(auto) map_forward(C&& c, F&& f) {
-  return impl::map<1>(std::forward<C>(c),std::forward<F>(f));
-}
-
-template <typename T, typename F>
-requires Invocable<F&&,T>
-inline decltype(auto) map_forward(std::initializer_list<T> c, F&& f) {
-  return impl::map<1>(c,std::forward<F>(f));
+template <flags flags=flags::none, typename... T, typename F>
+requires Invocable<F&&,T...>
+inline decltype(auto) map(F&& f, std::initializer_list<T>... c) {
+  return impl::map<flags::forward>(std::forward<F>(f),c...);
 }
 
 namespace operators { // --------------------------------------------
@@ -95,13 +101,13 @@ namespace operators { // --------------------------------------------
 template <Container C, typename F>
 requires InvocableForElements<F&&,C>
 inline decltype(auto) operator|(C&& c, F&& f) {
-  return impl::map<0>(std::forward<C>(c),std::forward<F>(f));
+  return impl::map<flags::none>(std::forward<F>(f),std::forward<C>(c));
 }
 
 template <Container C, typename F>
 requires InvocableForElements<F&&,C>
 inline decltype(auto) operator||(C&& c, F&& f) {
-  return impl::map<1>(std::forward<C>(c),std::forward<F>(f));
+  return impl::map<flags::forward>(std::forward<F>(f),std::forward<C>(c));
 }
 
 template <Tuple C, typename F>

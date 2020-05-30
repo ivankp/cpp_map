@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
 
   const char* cstrs [] { "char*", "array" };
   // cstrs | printf; // doesn't work
-  map(cstrs,printf);
+  map(printf,cstrs);
 
   vec | printf;
   cout << '\n';
@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
   };
   cout << '\n';
 
-  for (auto x : map({ "hello", "world" },strlen)) cout << ' ' << x;
+  for (auto x : map(strlen,{ "hello", "world" })) cout << ' ' << x;
   cout << '\n';
 
   for (auto x : std::vector<std::string> {

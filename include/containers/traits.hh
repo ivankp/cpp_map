@@ -20,30 +20,6 @@ struct compose {
   template <typename... T> using type = A<apply_type<B,T...>>;
 };
 
-template <typename T>
-using tuple_index_sequence = std::make_index_sequence<std::tuple_size_v<T>>;
-
-template <typename T, typename Pred>
-static constexpr bool is_for_each_element =
-[]<size_t... I>(std::index_sequence<I...>) {
-  return (apply_type<Pred,std::tuple_element_t<I,T>>::value && ...);
-}(tuple_index_sequence<T>{});
-
-template <typename T, typename Pred>
-static constexpr bool elements_transform_to_same =
-[]<size_t I0,size_t... I>(std::index_sequence<I0,I...>) {
-  return (std::is_same_v<
-    apply_type<Pred,std::tuple_element_t<I0,T>>,
-    apply_type<Pred,std::tuple_element_t<I,T>>
-  > && ...);
-}(tuple_index_sequence<T>{});
-
-template <typename F, typename T>
-static constexpr bool can_apply =
-  []<size_t... I>(std::index_sequence<I...>) {
-    return std::is_invocable_v<F,std::tuple_element_t<I,T>...>;
-  }(tuple_index_sequence<T>{});
-
 template <typename F, typename... T>
 using returns_void = std::is_void< std::invoke_result_t<F,T...> >;
 
