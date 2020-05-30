@@ -28,7 +28,7 @@ template <flags flags, typename F, typename C>
 inline decltype(auto) map(F&& f, C&& c) {
   if constexpr (Tuple<C>) { // is a tuple
     if constexpr (
-      !is_for_each_element<C&&, curry<returns_not_void,F&&>>
+      !is_for_each_element<curry<returns_not_void,F&&>,C&&>
     ) { // returns void
       std::apply([&](auto&&... x){ ( ..., std::invoke(
         std::forward<F>(f), std::forward<decltype(x)>(x) ) );
@@ -87,6 +87,50 @@ inline decltype(auto) map(F&& f, C&& c) {
 template <flags flags, typename F, typename... C>
 requires (sizeof...(C) > 1)
 inline decltype(auto) map(F&& f, C&&... c) {
+  using indices = container_index_sequence<C...>;
+
+  using result_types =
+    decltype([]<size_t... I>(std::index_sequence<I...>) {
+      auto impl = []<size_t J>(std::integral_constant<size_t,J>) {
+        return type_constant<
+          std::invoke_result_t<F&&,container_element_t<C&&,J>...>
+        >{};
+      };
+      return type_sequence<typename decltype(
+        impl(std::integral_constant<size_t,I>{}) )::type ...>{};
+    }(indices{}));
+
+  static constexpr auto ret =
+    []<typename... T>(type_sequence<T...>) {
+      return (struct { bool v, same, refs; }) {
+        (... || std::is_void_v<T>),
+        are_same_v<T...>,
+        (... || std::is_reference_v<T>),
+      };
+    }(result_types{});
+
+  if constexpr ((... || Tuple<C>)) { // at least one tuple
+    return [&]<size_t... I>(std::index_sequence<I...>) {
+      auto impl = [&]<size_t J>(std::integral_constant<size_t,J>)
+        -> decltype(auto) {
+          return std::invoke(
+            std::forward<F>(f),
+            std::get<J>(std::forward<C>(c))... // TODO: get
+          );
+        };
+      if constexpr(ret.v)
+        (..., impl(std::integral_constant<size_t,I>{}));
+      else if constexpr(ret.same && !( !!(flags & flags::forward) && ret.refs ))
+        // TODO: enforce execution order?
+        return std::array { impl(std::integral_constant<size_t,I>{}) ... };
+      else if constexpr(!!(flags & flags::forward))
+        return std::forward_as_tuple(
+          impl(std::integral_constant<size_t,I>{}) ...);
+      else
+        return std::tuple { impl(std::integral_constant<size_t,I>{}) ... };
+    }(indices{});
+  } else { // not a tuple
+  }
 }
 
 } // end namespace impl

@@ -126,4 +126,12 @@ int main(int argc, char* argv[]) {
     || [&](auto i) -> decltype(auto) { return vec[i]; });
   show_type(std::vector { 0, 1 }
     || [&](auto i) -> decltype(auto) { return std::move(vec[i]); });
+
+  map([](const auto&... x){ (cout << ... << x) << '\n'; },
+    std::tuple{1,2}, std::tuple{"a","b"} );
+  show_type(map(
+    [](const auto&... x) -> decltype(auto){
+      return ((cout << ... << x) << '\n');
+    },
+    std::tuple{1,2}, std::tuple{"a","b"} ));
 }
