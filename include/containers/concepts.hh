@@ -22,7 +22,8 @@ concept ConstSizable =
 template <typename C>
 concept Tuple =
   requires {
-    { std::tuple_size<C>::value } -> std::convertible_to<std::size_t>;
+    { std::tuple_size<std::remove_reference_t<C>>::value }
+      -> std::convertible_to<std::size_t>;
   };
 
 template <typename C>
@@ -42,9 +43,6 @@ template <typename C>
 concept Container = Iterable<C> || Tuple<C>;
 
 template <typename C>
-concept NotTuple = Iterable<C> && (!Tuple<C>);
-
-template <typename C>
 concept Sizable =
   requires(C& a) {
     { std::size(a) } -> std::convertible_to<std::size_t>;
@@ -55,20 +53,22 @@ concept List = Iterable<C> && Sizable<C>;
 
 template <Container C>
 struct container_traits {
+  using type = std::remove_reference_t<C>;
   template <size_t I=0>
-  using type = decltype(*std::begin(std::declval<C>()));
+  using element_ref_type = decltype(*std::begin(std::declval<C>()));
   static constexpr size_t size = 0;
 };
 
 template <Tuple C>
 struct container_traits<C> {
+  using type = std::remove_reference_t<C>;
   template <size_t I>
-  using type = decltype(std::get<I>(std::declval<C>()));
-  static constexpr size_t size = std::tuple_size_v<C>;
+  using element_ref_type = decltype(std::get<I>(std::declval<C>()));
+  static constexpr size_t size = std::tuple_size_v<type>;
 };
 
 template <typename C, size_t I>
-using container_element_t = typename container_traits<C>::type<I>;
+using container_element_t = typename container_traits<C>::element_ref_type<I>;
 
 template <typename C>
 constexpr size_t container_size = container_traits<C>::size;

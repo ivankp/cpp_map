@@ -28,7 +28,7 @@ template <flags flags, typename F, typename C>
 inline decltype(auto) map(F&& f, C&& c) {
   if constexpr (Tuple<C>) { // is a tuple
     if constexpr (
-      !is_for_each_element<C, curry<returns_not_void,F&&>>
+      !is_for_each_element<C&&, curry<returns_not_void,F&&>>
     ) { // returns void
       std::apply([&](auto&&... x){ ( std::invoke(
         std::forward<F>(f), std::forward<decltype(x)>(x) ), ... );
@@ -36,7 +36,7 @@ inline decltype(auto) map(F&& f, C&& c) {
     } else { // returns not void
       return std::apply([&](auto&&... x){
         if constexpr (
-          elements_transform_to_same<C,
+          elements_transform_to_same<C&&,
             compose<std::decay_t, curry<std::invoke_result_t,F&&> > >
           && !( (flags & flags::forward)!=flags::none &&
             std::is_reference_v<
