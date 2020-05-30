@@ -9,13 +9,13 @@
 #define TEST(var) \
   std::cout << "\033[36m" #var "\033[0m = " << (var) << std::endl;
 
-#include "containers/containers.hh"
+#include "map/map.hh"
 
 using std::cout;
 using std::endl;
 
-using namespace ivanp::containers;
-using namespace ivanp::containers::operators;
+using namespace ivanp::map;
+using namespace ivanp::map::operators;
 
 template <List T>
 auto my_list_size(const T& x) {

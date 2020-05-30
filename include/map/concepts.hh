@@ -1,11 +1,11 @@
-#ifndef IVANP_CONTAINERS_CONCEPTS_HH
-#define IVANP_CONTAINERS_CONCEPTS_HH
+#ifndef IVANP_MAP_CONCEPTS_HH
+#define IVANP_MAP_CONCEPTS_HH
 
 #include <concepts>
 
-#include <containers/traits.hh>
+#include <map/traits.hh>
 
-namespace ivanp::containers {
+namespace ivanp::map {
 
 /*
 template <auto> struct require_constant;
@@ -132,6 +132,6 @@ static constexpr bool elements_transform_to_same =
     >);
   }(container_index_sequence<C>{});
 
-} // end namespace containers
+} // end namespace map
 
 #endif

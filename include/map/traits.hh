@@ -1,11 +1,11 @@
-#ifndef IVANP_CONTAINERS_TRAITS_HH
-#define IVANP_CONTAINERS_TRAITS_HH
+#ifndef IVANP_MAP_TRAITS_HH
+#define IVANP_MAP_TRAITS_HH
 
 #include <type_traits>
 #include <utility>
 #include <tuple>
 
-namespace ivanp::containers {
+namespace ivanp::map {
 
 template <typename T>
 struct type_constant {
@@ -48,6 +48,6 @@ struct are_same<A,B...>: std::bool_constant<(... && std::is_same_v<A,B>)> { };
 template <typename... T>
 constexpr bool are_same_v = are_same<T...>::value;
 
-} // end namespace containers
+} // end namespace map
 
 #endif

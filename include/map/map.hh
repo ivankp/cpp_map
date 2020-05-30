@@ -1,14 +1,14 @@
-#ifndef IVANP_CONTAINERS_HH
-#define IVANP_CONTAINERS_HH
+#ifndef IVANP_MAP_HH
+#define IVANP_MAP_HH
 
 #include <functional>
 #include <array>
 #include <vector>
 
-#include <containers/concepts.hh>
+#include <map/concepts.hh>
 #include <enum_class_bitmask.hh>
 
-namespace ivanp::containers {
+namespace ivanp::map {
 enum class flags {
   none         = 0,
   forward      = 1 << 0,
@@ -19,10 +19,10 @@ enum class flags {
 
 namespace ivanp {
 template <>
-constexpr bool enable_bitmask_operators<containers::flags> = true;
+constexpr bool enable_bitmask_operators<map::flags> = true;
 }
 
-namespace ivanp::containers {
+namespace ivanp::map {
 namespace impl {
 
 template <flags flags, typename F, typename C>
@@ -126,7 +126,7 @@ inline decltype(auto) map(F&& f, C&&... c) {
       else if constexpr (
         !(flags & flags::prefer_tuple) &&
         ret.constructible &&
-        ret.same && !( !!(flags & flags::forward) && ret.refs )
+        ret.same && ( !(flags & flags::forward) || !ret.refs )
       )
         // TODO: enforce execution order?
         return std::array { impl(index_constant<I>{}) ... };
@@ -135,7 +135,7 @@ inline decltype(auto) map(F&& f, C&&... c) {
       else
         return std::forward_as_tuple( impl(index_constant<I>{}) ... );
     }(indices{});
-  } else { // not a tuple
+  } else { // no tuples
   }
 }
 
@@ -174,6 +174,6 @@ inline constexpr decltype(auto) operator%(C&& c, F&& f) {
 }
 
 } // end namespace operators
-} // end namespace containers
+} // end namespace map
 
 #endif
