@@ -46,6 +46,12 @@ IVANP_ASSIGNMENT_BITMASK_OPERATOR(|=)
 IVANP_ASSIGNMENT_BITMASK_OPERATOR(&=)
 IVANP_ASSIGNMENT_BITMASK_OPERATOR(^=)
 
+template <BitMask Enum>
+constexpr bool operator!(Enum rhs) noexcept {
+  using type = std::underlying_type_t<Enum>;
+  return !static_cast<type>(rhs);
+}
+
 }
 
 #endif

@@ -120,6 +120,10 @@ int main(int argc, char* argv[]) {
   show_type(std::tuple{a1,a2});
   show_type(std::array{a1,a2});
 
-  show_type(std::vector { 0, 1 } // tests vector element type
+  show_type(std::vector { 0, 1 }
     | [&](auto i) -> decltype(auto) { return vec[i]; });
+  show_type(std::vector { 0, 1 }
+    || [&](auto i) -> decltype(auto) { return vec[i]; });
+  show_type(std::vector { 0, 1 }
+    || [&](auto i) -> decltype(auto) { return std::move(vec[i]); });
 }

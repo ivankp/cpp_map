@@ -38,7 +38,7 @@ inline decltype(auto) map(F&& f, C&& c) {
         if constexpr (
           elements_transform_to_same<C&&,
             compose<std::decay_t, curry<std::invoke_result_t,F&&> > >
-          && !( (flags & flags::forward)!=flags::none &&
+          && !( !!(flags & flags::forward) &&
             std::is_reference_v<
               std::invoke_result_t<F&&,std::tuple_element_t<0,C>>> )
         ) {
@@ -46,7 +46,7 @@ inline decltype(auto) map(F&& f, C&& c) {
             std::forward<F>(f), std::forward<decltype(x)>(x) )...
           };
         } else {
-          if constexpr ((flags & flags::forward) != flags::none) {
+          if constexpr (!!(flags & flags::forward)) {
             return std::forward_as_tuple( std::invoke(
               std::forward<F>(f), std::forward<decltype(x)>(x) )...
             );
@@ -59,14 +59,21 @@ inline decltype(auto) map(F&& f, C&& c) {
       },c);
     }
   } else { // not a tuple
+    using element_t = decltype(*std::begin(c));
     if constexpr (
-      returns_void<F&&,decltype(*std::begin(c))>::value
+      returns_void<F&&,element_t>::value
     ) { // returns void
       for (auto&& x : c)
         std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) );
     } else { // returns not void
-      std::vector<std::decay_t<std::invoke_result_t<
-        F, decltype(*std::begin(c)) >>> out;
+      using result_t = std::invoke_result_t<F,element_t>;
+      std::vector<
+        std::conditional_t<
+          !(flags & flags::forward) || !std::is_lvalue_reference_v<result_t>,
+          std::decay_t<result_t>,
+          std::reference_wrapper<std::remove_reference_t<result_t>>
+        >
+      > out;
       if constexpr (Sizable<C>)
         out.reserve(std::size(c));
       for (auto&& x : c)
