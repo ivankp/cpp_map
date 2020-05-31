@@ -12,11 +12,11 @@ namespace ivanp::map {
 enum class flags {
   none = 0,
   forward = 1 << 0,
-  check_length = 1 << 1,
-  prefer_tuple = 1 << 2,
-  no_static_size_check = 1 << 3,
-  no_dynamic_size_check = 1 << 4,
-  no_size_check = no_static_size_check | no_dynamic_size_check
+  no_static_size_check  = 1 << 1,
+  no_dynamic_size_check = 1 << 2,
+  no_size_check = no_static_size_check | no_dynamic_size_check,
+  prefer_tuple  = 1 << 3,
+  prefer_iteration = 1 << 4
 };
 }
 
@@ -93,22 +93,31 @@ requires (sizeof...(C) > 1)
 inline decltype(auto) map(F&& f, C&&... c) {
   using indices = container_index_sequence<C...>;
   using dimensions = std::make_index_sequence<sizeof...(C)>;
+  static constexpr bool some_tuples = (... || Tuple<C>);
 
   if constexpr (!(flags & flags::no_static_size_check) && sizeof...(C)>1) {
-    (..., []<typename T>(type_constant<T>) {
+    (..., []<typename _C>(type_constant<_C>) {
       static_assert(
-        !Tuple<T> || indices::size() == container_size<T>,
+        !Tuple<_C> || indices::size() == container_size<_C>,
         "tuples of unequal size given to map");
     }(type_constant<C>{}));
   }
   if constexpr (!(flags & flags::no_dynamic_size_check) && sizeof...(C)>1) {
-    (..., []<typename T>(T&& c) {
+    auto impl = [
+      first = !some_tuples,
+      s = indices::size()
+    ] <typename _C> (_C&& _c) mutable {
       if constexpr (
-        Sizable<T> && !(!(flags & flags::no_static_size_check) && Tuple<T>)
-      )
-        if (indices::size() != std::size(c))
+        Sizable<_C> && !(!(flags & flags::no_static_size_check) && Tuple<_C>)
+      ) {
+        if (first) {
+          first = false;
+          s = std::size(_c);
+        } else if (std::size(_c) != s)
           throw std::length_error("containers of unequal size given to map");
-    }(c));
+      }
+    };
+    (..., impl(c));
   }
 
   using result_types =
@@ -134,7 +143,10 @@ inline decltype(auto) map(F&& f, C&&... c) {
       };
     }(result_types{});
 
-  if constexpr ((... || Tuple<C>)) { // at least one tuple
+  if constexpr ( // map to tuple
+    !(!!(flags & flags::prefer_iteration) && (... && Iterable<C>))
+    && some_tuples
+  ) {
     // Note: evaluation order is sequential for list-initialization
     // https://en.cppreference.com/w/cpp/language/eval_order   Rule 10
     return [&]<size_t... I>(std::index_sequence<I...>) {
@@ -163,12 +175,12 @@ inline decltype(auto) map(F&& f, C&&... c) {
               if constexpr (Tuple<_C>) {
                 return std::get<J>(iter.value);
               } else {
-                decltype(auto) it = std::get<0>(iter.value);
+                auto& it = iter.value.first;
                 if constexpr (
                   !(flags & flags::no_dynamic_size_check) && !Sizable<_C>
                 ) {
-                  if (it == std::get<1>(iter.value)) throw std::length_error(
-                    "in map: container reached end sooner than expected");
+                  if (it == iter.value.second) throw std::length_error(
+                    "in map: container reached end before others");
                 }
                 decltype(auto) x = *it;
                 ++it;
@@ -199,7 +211,34 @@ inline decltype(auto) map(F&& f, C&&... c) {
         return return_type{ impl(index_constant<I>{}) ... };
       }
     }(indices{});
-  } else { // no tuples
+  } else { // map to vector
+    std::tuple iterators {
+      std::pair {
+        std::forward<C>(c).begin(),
+        std::forward<C>(c).end()
+      } ...
+    };
+    return [&]<size_t... K>(std::index_sequence<K...>) -> decltype(auto) {
+      for (;;) {
+        if constexpr (!!(flags & flags::no_dynamic_size_check)) {
+          if ((... || (
+            std::get<K>(iterators).first == std::get<K>(iterators).second
+          ))) return;
+        } else {
+          const size_t n_ended = (... + (
+            std::get<K>(iterators).first == std::get<K>(iterators).second
+          ));
+          if (n_ended == sizeof...(K)) return;
+          else if (n_ended != 0) throw std::length_error(
+            "in map: container reached end before others");
+        }
+
+        if constexpr ( ret.has_void ) {
+          std::invoke( std::forward<F>(f), *std::get<K>(iterators).first ... );
+          ( ..., ++std::get<K>(iterators).first );
+        }
+      }
+    }(dimensions{});
   }
 }
 
@@ -215,6 +254,12 @@ template <flags flags=flags::none, typename... T, typename F>
 requires Invocable<F&&,T...>
 inline decltype(auto) map(F&& f, std::initializer_list<T>... c) {
   return impl::map<flags>(std::forward<F>(f),c...);
+}
+
+template <flags flags=flags::none, typename F>
+requires Invocable<F&&>
+inline decltype(auto) map(F&& f) {
+  // return impl::map<flags>(std::forward<F>(f));
 }
 
 namespace operators { // --------------------------------------------

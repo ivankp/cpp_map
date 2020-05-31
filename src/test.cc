@@ -145,4 +145,14 @@ int main(int argc, char* argv[]) {
   map(
     [](const auto&... x){ (cout << ... << x) << '\n'; },
     std::array{1,2}, vec );
+
+  map([](auto...){ }); // map nothing
+
+  map<flags::prefer_iteration | flags::no_size_check>(
+    [](const auto&... x){ (cout << ... << x) << '\n'; },
+    std::array{1,2,3}, vec );
+
+  map(
+    [](const auto&... x){ (cout << ... << x) << '\n'; },
+    {1,2,3}, {'a','b','c'}, {"X","Y","Z"} );
 }
