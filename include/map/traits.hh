@@ -48,9 +48,9 @@ struct are_same<A,B...>: std::bool_constant<(... && std::is_same_v<A,B>)> { };
 template <typename... T>
 constexpr bool are_same_v = are_same<T...>::value;
 
-template <typename Label, typename T>
-struct labeled {
-  using label = Label;
+template <typename Tag, typename T>
+struct tagged {
+  using tag = Tag;
   using type = T;
   T value;
 };

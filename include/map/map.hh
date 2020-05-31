@@ -14,8 +14,9 @@ enum class flags {
   forward = 1 << 0,
   check_length = 1 << 1,
   prefer_tuple = 1 << 2,
-  static_size_check = 1 << 3,
-  dynamic_size_check = 1 << 4
+  no_static_size_check = 1 << 3,
+  no_dynamic_size_check = 1 << 4,
+  no_size_check = no_static_size_check | no_dynamic_size_check
 };
 }
 
@@ -93,17 +94,17 @@ inline decltype(auto) map(F&& f, C&&... c) {
   using indices = container_index_sequence<C...>;
   using dimensions = std::make_index_sequence<sizeof...(C)>;
 
-  if constexpr (!!(flags & flags::static_size_check) && sizeof...(C)>1) {
+  if constexpr (!(flags & flags::no_static_size_check) && sizeof...(C)>1) {
     (..., []<typename T>(type_constant<T>) {
       static_assert(
         !Tuple<T> || indices::size() == container_size<T>,
         "tuples of unequal size given to map");
     }(type_constant<C>{}));
   }
-  if constexpr (!!(flags & flags::dynamic_size_check) && sizeof...(C)>1) {
+  if constexpr (!(flags & flags::no_dynamic_size_check) && sizeof...(C)>1) {
     (..., []<typename T>(T&& c) {
       if constexpr (
-        Sizable<T> && (!(flags & flags::static_size_check) || !Tuple<T>)
+        Sizable<T> && !(!(flags & flags::no_static_size_check) && Tuple<T>)
       )
         if (indices::size() != std::size(c))
           throw std::length_error("containers of unequal size given to map");
@@ -140,8 +141,8 @@ inline decltype(auto) map(F&& f, C&&... c) {
       std::tuple iterators {
         []<typename _C>(_C&& _c) {
           if constexpr (Tuple<_C>)
-            return labeled<_C&&,_C&&> { std::forward<_C>(_c) };
-          else return labeled<_C&&,std::pair<
+            return tagged<_C&&,_C&&> { std::forward<_C>(_c) };
+          else return tagged<_C&&,std::pair<
               decltype(std::forward<_C>(_c).begin()),
               decltype(std::forward<_C>(_c).end())
             >> {
@@ -158,13 +159,13 @@ inline decltype(auto) map(F&& f, C&&... c) {
             std::forward<F>(f),
             [&]<size_t K>(index_constant<K>) -> decltype(auto) {
               decltype(auto) iter = std::get<K>(iterators);
-              using _C = typename std::decay_t<decltype(iter)>::label;
+              using _C = typename std::decay_t<decltype(iter)>::tag;
               if constexpr (Tuple<_C>) {
                 return std::get<J>(iter.value);
               } else {
                 decltype(auto) it = std::get<0>(iter.value);
                 if constexpr (
-                  !(!(flags & flags::dynamic_size_check) || Sizable<_C>)
+                  !(flags & flags::no_dynamic_size_check) && !Sizable<_C>
                 ) {
                   if (it == std::get<1>(iter.value)) throw std::length_error(
                     "in map: container reached end sooner than expected");
