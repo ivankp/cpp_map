@@ -139,6 +139,10 @@ int main(int argc, char* argv[]) {
 
   show_type(map(
     [](auto... x){ return (... + x); }, std::array{1}, std::array{2,0} ));
-  show_type(map<flags::prefer_tuple>(
-    [](auto... x){ return (... + x); }, std::array{1}, std::array{2,0} ));
+  show_type(map<flags::prefer_tuple | flags::static_size_check>(
+    [](auto... x){ return (... + x); }, std::array{1}, std::array{2} ));
+
+  map<flags::dynamic_size_check>(
+    [](const auto&... x){ (cout << ... << x) << '\n'; },
+    std::array{1,2}, vec );
 }

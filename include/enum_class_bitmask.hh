@@ -9,15 +9,17 @@ constexpr bool enable_bitmask_operators = false;
 template <typename Enum>
 concept BitMask = enable_bitmask_operators<Enum>;
 
+}
+
 #define IVANP_UNARY_BITMASK_OPERATOR(OP) \
-  template <BitMask Enum> \
+  template <ivanp::BitMask Enum> \
   constexpr Enum operator OP(Enum rhs) noexcept { \
     using type = std::underlying_type_t<Enum>; \
     return static_cast<Enum>( OP static_cast<type>(rhs) ); \
   }
 
 #define IVANP_BINARY_BITMASK_OPERATOR(OP) \
-  template <BitMask Enum> \
+  template <ivanp::BitMask Enum> \
   constexpr Enum operator OP(Enum lhs, Enum rhs) noexcept { \
     using type = std::underlying_type_t<Enum>; \
     return static_cast<Enum>( \
@@ -27,7 +29,7 @@ concept BitMask = enable_bitmask_operators<Enum>;
   }
 
 #define IVANP_ASSIGNMENT_BITMASK_OPERATOR(OP) \
-  template <BitMask Enum> \
+  template <ivanp::BitMask Enum> \
   constexpr Enum& operator OP(Enum& lhs, Enum rhs) noexcept { \
     using type = std::underlying_type_t<Enum>; \
     return static_cast<Enum&>( \
@@ -46,12 +48,10 @@ IVANP_ASSIGNMENT_BITMASK_OPERATOR(|=)
 IVANP_ASSIGNMENT_BITMASK_OPERATOR(&=)
 IVANP_ASSIGNMENT_BITMASK_OPERATOR(^=)
 
-template <BitMask Enum>
+template <ivanp::BitMask Enum>
 constexpr bool operator!(Enum rhs) noexcept {
   using type = std::underlying_type_t<Enum>;
   return !static_cast<type>(rhs);
-}
-
 }
 
 #endif
