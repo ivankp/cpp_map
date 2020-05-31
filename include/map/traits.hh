@@ -7,18 +7,43 @@
 
 namespace ivanp::map {
 
+// https://ldionne.com/2015/11/29/efficient-parameter-pack-indexing/
+template <size_t I, typename T, typename... Ts>
+struct pack_element { using type = typename pack_element<I-1, Ts...>::type; };
+template <typename T, typename... Ts>
+struct pack_element<0, T, Ts...> { using type = T; };
+template <size_t I, typename... Ts>
+using pack_element_t = typename pack_element<I, Ts...>::type;
+
 template <typename T>
-struct type_constant {
-  using type = T;
-};
+struct type_constant { using type = T; };
 
 template <typename... T>
-struct type_sequence {
-  // static constexpr size_t size = sizeof...(T);
+struct type_sequence { };
+
+template <typename>
+struct type_sequence_head;
+template <typename T, typename... Ts>
+struct type_sequence_head<type_sequence<T,Ts...>> { using type = T; };
+template <typename Seq>
+using type_sequence_head_t = typename type_sequence_head<Seq>::type;
+
+template <size_t I, typename>
+struct type_sequence_element;
+template <size_t I, typename... Ts>
+struct type_sequence_element<I,type_sequence<Ts...>> {
+  using type = pack_element_t<I,Ts...>;
 };
+template <size_t I, typename Seq>
+using type_sequence_element_t = typename type_sequence_element<I,Seq>::type;
+
+template <typename T, typename... Ts>
+constexpr T&& head_value(T&& x, Ts&&...) noexcept { return x; }
 
 template <size_t I>
 using index_constant = std::integral_constant<size_t,I>;
+
+// ##################################################################
 
 template <template<typename...> typename F, typename... A>
 struct curry {

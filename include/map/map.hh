@@ -219,24 +219,59 @@ inline decltype(auto) map(F&& f, C&&... c) {
       } ...
     };
     return [&]<size_t... K>(std::index_sequence<K...>) -> decltype(auto) {
-      for (;;) {
-        if constexpr (!!(flags & flags::no_dynamic_size_check)) {
-          if ((... || (
-            std::get<K>(iterators).first == std::get<K>(iterators).second
-          ))) return;
-        } else {
-          const size_t n_ended = (... + (
-            std::get<K>(iterators).first == std::get<K>(iterators).second
-          ));
-          if (n_ended == sizeof...(K)) return;
-          else if (n_ended != 0) throw std::length_error(
-            "in map: container reached end before others");
-        }
+      if constexpr ( ret.has_void ) {
+        for (;;) {
+          if constexpr (!!(flags & flags::no_dynamic_size_check)) {
+            if ((... || (
+              std::get<K>(iterators).first == std::get<K>(iterators).second
+            ))) return;
+          } else {
+            const size_t n_ended = (... + (
+              std::get<K>(iterators).first == std::get<K>(iterators).second
+            ));
+            if (n_ended == sizeof...(K)) return;
+            else if (n_ended != 0) throw std::length_error(
+              "in map: container reached end before others");
+          }
 
-        if constexpr ( ret.has_void ) {
           std::invoke( std::forward<F>(f), *std::get<K>(iterators).first ... );
           ( ..., ++std::get<K>(iterators).first );
         }
+      } else {
+        // return result_types{};
+        return type_constant<result_types>{};
+        // using result_t = type_sequence_head_t<result_types>;
+        // return type_constant<result_t>{};
+        // std::vector<
+        //   std::conditional_t<
+        //     !(flags & flags::forward)
+        //     || !std::is_lvalue_reference_v<result_t>,
+        //     std::decay_t<result_t>,
+        //     std::reference_wrapper<std::remove_reference_t<result_t>>
+        //   >
+        // > out;
+        // return out;
+        // if constexpr (Sizable<pack_element_t<0,C&...>>)
+        //   out.reserve(std::size(head_value(c...)));
+
+        // for (;;) {
+        //   if constexpr (!!(flags & flags::no_dynamic_size_check)) {
+        //     if ((... || (
+        //       std::get<K>(iterators).first == std::get<K>(iterators).second
+        //     ))) return out;
+        //   } else {
+        //     const size_t n_ended = (... + (
+        //       std::get<K>(iterators).first == std::get<K>(iterators).second
+        //     ));
+        //     if (n_ended == sizeof...(K)) return out;
+        //     else if (n_ended != 0) throw std::length_error(
+        //       "in map: container reached end before others");
+        //   }
+        //
+        //   out.push_back( std::invoke(
+        //     std::forward<F>(f), *std::get<K>(iterators).first ... ) );
+        //   ( ..., ++std::get<K>(iterators).first );
+        // }
       }
     }(dimensions{});
   }
@@ -258,7 +293,7 @@ inline decltype(auto) map(F&& f, std::initializer_list<T>... c) {
 
 template <flags flags=flags::none, typename F>
 requires Invocable<F&&>
-inline decltype(auto) map(F&& f) {
+inline decltype(auto) map(F&& /*f*/) {
   // return impl::map<flags>(std::forward<F>(f));
 }
 

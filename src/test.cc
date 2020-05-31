@@ -5,6 +5,7 @@
 #include <iterator>
 #include <cstring>
 #include <cstdio>
+#include <sstream>
 
 #define TEST(var) \
   std::cout << "\033[36m" #var "\033[0m = " << (var) << std::endl;
@@ -155,4 +156,10 @@ int main(int argc, char* argv[]) {
   map(
     [](const auto&... x){ (cout << ... << x) << '\n'; },
     {1,2,3}, {'a','b','c'}, {"X","Y","Z"} );
+  show_type(map(
+    [](const auto&... x){
+      std::stringstream ss;
+      (ss << ... << x);
+      return ss.str();
+    }, {1,2,3}, {'a','b','c'}, {"X","Y","Z"} ));
 }
