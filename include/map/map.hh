@@ -32,7 +32,11 @@ template <flags flags, typename F, typename... C>
 inline decltype(auto) map(F&& f, C&&... c) {
   using indices = container_index_sequence<C...>;
   using dimensions = std::make_index_sequence<sizeof...(C)>;
+
   static constexpr bool got_tuples = (... || Tuple<C>);
+  static constexpr bool map_by_unfolding =
+    got_tuples &&
+    !(!!(flags & flags::prefer_iteration) && (... && Iterable<C>));
 
   if constexpr (!(flags & flags::no_static_size_check) && sizeof...(C)>1) {
     (..., []<typename _C>(type_constant<_C>) {
@@ -82,43 +86,33 @@ inline decltype(auto) map(F&& f, C&&... c) {
       };
     }(result_types{});
 
-  if constexpr ( // map to tuple
-    !(!!(flags & flags::prefer_iteration) && (... && Iterable<C>))
-    && got_tuples
-  ) {
+  auto iterators = std::make_tuple(
+    []<typename _C>(_C&& _c) {
+      if constexpr (map_by_unfolding && Tuple<_C>)
+        return (struct { _C&& value; }){ std::forward<_C>(_c) };
+      else return std::make_pair( std::begin(_c), std::end(_c) );
+    }(std::forward<C>(c)) ...
+  );
+
+  if constexpr (map_by_unfolding) { // map to tuple
     // Note: evaluation order is sequential for list-initialization
     // https://en.cppreference.com/w/cpp/language/eval_order   Rule 10
     return [&]<size_t... I>(std::index_sequence<I...>) {
-      std::tuple iterators {
-        []<typename _C>(_C&& _c) {
-          if constexpr (Tuple<_C>)
-            return tagged<_C&&,_C&&> { std::forward<_C>(_c) };
-          else return tagged<_C&&,std::pair<
-              decltype(std::forward<_C>(_c).begin()),
-              decltype(std::forward<_C>(_c).end())
-            >> {
-            std::pair {
-              std::begin(std::forward<_C>(_c)),
-              std::end  (std::forward<_C>(_c))
-            }};
-        }(std::forward<C>(c)) ...
-      };
-
       auto impl = [&]<size_t J>(index_constant<J>) -> decltype(auto) {
         return [&]<size_t... Ks>(std::index_sequence<Ks...>) -> decltype(auto) {
           return std::invoke(
             std::forward<F>(f),
             [&]<size_t K>(index_constant<K>) -> decltype(auto) {
               decltype(auto) iter = std::get<K>(iterators);
-              using _C = typename std::decay_t<decltype(iter)>::tag;
+              using _C = pack_element_t<K,C...>;
               if constexpr (Tuple<_C>) {
                 return std::get<J>(iter.value);
               } else {
-                auto& it = iter.value.first;
+                auto& it = iter.first;
                 if constexpr (
                   !(flags & flags::no_dynamic_size_check) && !Sizable<_C>
                 ) {
-                  if (it == iter.value.second) throw std::length_error(
+                  if (it == iter.second) throw std::length_error(
                     "in map: container reached end before others");
                 }
                 decltype(auto) x = *it;
@@ -151,12 +145,6 @@ inline decltype(auto) map(F&& f, C&&... c) {
       }
     }(indices{});
   } else { // map to vector
-    auto iterators = std::make_tuple(
-      std::make_pair(
-        std::begin(std::forward<C>(c)),
-        std::end  (std::forward<C>(c))
-      ) ...
-    );
     return [&]<size_t... K>(std::index_sequence<K...>) -> decltype(auto) {
       if constexpr ( ret.has_void ) {
         for (;;) {
