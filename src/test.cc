@@ -10,6 +10,10 @@
 #define TEST(var) \
   std::cout << "\033[36m" #var "\033[0m = " << (var) << std::endl;
 
+void show_type(auto&&) { std::cout << __PRETTY_FUNCTION__ << '\n'; }
+
+template <typename> struct test_type;
+
 #include "map/map.hh"
 
 using std::cout;
@@ -59,6 +63,7 @@ int main(int argc, char* argv[]) {
   // [](int (&a)[]) { TEST(std::size(a)); }(c_arr);
 
   const char* cstrs [] { "char*", "array" };
+  // TODO: should this be treated as Tuple or List?
   // cstrs | printf; // doesn't work
   map(printf,cstrs);
 
@@ -90,8 +95,6 @@ int main(int argc, char* argv[]) {
 
   ( std::tuple{"hello", "world"} | strlen | [](auto x) { return x+1; } )
   % [](auto a, auto b){ cout << a << " + " << b << " = " << (a+b) << '\n'; };
-
-  auto show_type = [](const auto&) { cout << __PRETTY_FUNCTION__ << '\n'; };
 
   show_type(std::pair<std::string,std::string> {
     "hello", "world"

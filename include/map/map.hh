@@ -28,72 +28,11 @@ constexpr bool enable_bitmask_operators<map::flags> = true;
 namespace ivanp::map {
 namespace impl {
 
-template <flags flags, typename F, typename C>
-inline decltype(auto) map(F&& f, C&& c) {
-  if constexpr (Tuple<C>) { // is a tuple
-    if constexpr (
-      !is_for_each_element<curry<returns_not_void,F&&>,C&&>
-    ) { // returns void
-      std::apply([&](auto&&... x){ ( ..., std::invoke(
-        std::forward<F>(f), std::forward<decltype(x)>(x) ) );
-      },c);
-    } else { // returns not void
-      return std::apply([&](auto&&... x){
-        if constexpr (
-          elements_transform_to_same<C&&,
-            compose<std::decay_t, curry<std::invoke_result_t,F&&> > >
-          && !( !!(flags & flags::forward) &&
-            std::is_reference_v<
-              std::invoke_result_t<F&&,std::tuple_element_t<0,C>>> )
-        ) {
-          return std::array { std::invoke(
-            std::forward<F>(f), std::forward<decltype(x)>(x) )...
-          };
-        } else {
-          if constexpr (!!(flags & flags::forward)) {
-            return std::forward_as_tuple( std::invoke(
-              std::forward<F>(f), std::forward<decltype(x)>(x) )...
-            );
-          } else {
-            return std::tuple { std::invoke(
-              std::forward<F>(f), std::forward<decltype(x)>(x) )...
-            };
-          }
-        }
-      },c);
-    }
-  } else { // not a tuple
-    using element_t = decltype(*std::begin(c));
-    if constexpr (
-      returns_void<F&&,element_t>::value
-    ) { // returns void
-      for (auto&& x : c)
-        std::invoke( std::forward<F>(f), std::forward<decltype(x)>(x) );
-    } else { // returns not void
-      using result_t = std::invoke_result_t<F,element_t>;
-      std::vector<
-        std::conditional_t<
-          !(flags & flags::forward) || !std::is_lvalue_reference_v<result_t>,
-          std::decay_t<result_t>,
-          std::reference_wrapper<std::remove_reference_t<result_t>>
-        >
-      > out;
-      if constexpr (Sizable<C>)
-        out.reserve(std::size(c));
-      for (auto&& x : c)
-        out.push_back( std::invoke(
-          std::forward<F>(f), std::forward<decltype(x)>(x) ) );
-      return out;
-    }
-  }
-}
-
 template <flags flags, typename F, typename... C>
-requires (sizeof...(C) > 1)
 inline decltype(auto) map(F&& f, C&&... c) {
   using indices = container_index_sequence<C...>;
   using dimensions = std::make_index_sequence<sizeof...(C)>;
-  static constexpr bool some_tuples = (... || Tuple<C>);
+  static constexpr bool got_tuples = (... || Tuple<C>);
 
   if constexpr (!(flags & flags::no_static_size_check) && sizeof...(C)>1) {
     (..., []<typename _C>(type_constant<_C>) {
@@ -104,7 +43,7 @@ inline decltype(auto) map(F&& f, C&&... c) {
   }
   if constexpr (!(flags & flags::no_dynamic_size_check) && sizeof...(C)>1) {
     auto impl = [
-      first = !some_tuples,
+      first = !got_tuples,
       s = indices::size()
     ] <typename _C> (_C&& _c) mutable {
       if constexpr (
@@ -145,7 +84,7 @@ inline decltype(auto) map(F&& f, C&&... c) {
 
   if constexpr ( // map to tuple
     !(!!(flags & flags::prefer_iteration) && (... && Iterable<C>))
-    && some_tuples
+    && got_tuples
   ) {
     // Note: evaluation order is sequential for list-initialization
     // https://en.cppreference.com/w/cpp/language/eval_order   Rule 10
@@ -159,8 +98,8 @@ inline decltype(auto) map(F&& f, C&&... c) {
               decltype(std::forward<_C>(_c).end())
             >> {
             std::pair {
-              std::forward<_C>(_c).begin(),
-              std::forward<_C>(_c).end()
+              std::begin(std::forward<_C>(_c)),
+              std::end  (std::forward<_C>(_c))
             }};
         }(std::forward<C>(c)) ...
       };
@@ -212,12 +151,12 @@ inline decltype(auto) map(F&& f, C&&... c) {
       }
     }(indices{});
   } else { // map to vector
-    std::tuple iterators {
-      std::pair {
-        std::forward<C>(c).begin(),
-        std::forward<C>(c).end()
-      } ...
-    };
+    auto iterators = std::make_tuple(
+      std::make_pair(
+        std::begin(std::forward<C>(c)),
+        std::end  (std::forward<C>(c))
+      ) ...
+    );
     return [&]<size_t... K>(std::index_sequence<K...>) -> decltype(auto) {
       if constexpr ( ret.has_void ) {
         for (;;) {
