@@ -117,21 +117,6 @@ constexpr bool is_invocable_for_elements =
 template <typename F, typename... C>
 concept InvocableForElements = is_invocable_for_elements<F,C...>;
 
-template <typename Pred, typename C>
-static constexpr bool is_for_each_element =
-  []<size_t... I>(std::index_sequence<I...>) {
-    return (... && apply_type<Pred,container_element_t<C,I>>::value);
-  }(container_index_sequence<C>{});
-
-template <typename C, typename Pred>
-static constexpr bool elements_transform_to_same =
-  []<size_t I0,size_t... I>(std::index_sequence<I0,I...>) {
-    using first = apply_type<Pred,container_element_t<C,I0>>;
-    return (... && std::is_same_v<
-      first, apply_type<Pred,container_element_t<C,I>>
-    >);
-  }(container_index_sequence<C>{});
-
 } // end namespace map
 
 #endif
