@@ -238,40 +238,40 @@ inline decltype(auto) map(F&& f, C&&... c) {
           ( ..., ++std::get<K>(iterators).first );
         }
       } else {
-        // return result_types{};
-        return type_constant<result_types>{};
-        // using result_t = type_sequence_head_t<result_types>;
-        // return type_constant<result_t>{};
-        // std::vector<
-        //   std::conditional_t<
-        //     !(flags & flags::forward)
-        //     || !std::is_lvalue_reference_v<result_t>,
-        //     std::decay_t<result_t>,
-        //     std::reference_wrapper<std::remove_reference_t<result_t>>
-        //   >
-        // > out;
-        // return out;
-        // if constexpr (Sizable<pack_element_t<0,C&...>>)
-        //   out.reserve(std::size(head_value(c...)));
+        // must create the vector with a lambda here
+        // because of a bug in GCC 10.1.0
+        auto out = []<typename T, typename... Ts>(type_sequence<T,Ts...>) ->
+            std::vector<
+              std::conditional_t<
+                !(flags & flags::forward)
+                || !std::is_lvalue_reference_v<T>,
+                std::decay_t<T>,
+                std::reference_wrapper<std::remove_reference_t<T>>
+              >
+            >
+          { return { }; }(result_types{});
 
-        // for (;;) {
-        //   if constexpr (!!(flags & flags::no_dynamic_size_check)) {
-        //     if ((... || (
-        //       std::get<K>(iterators).first == std::get<K>(iterators).second
-        //     ))) return out;
-        //   } else {
-        //     const size_t n_ended = (... + (
-        //       std::get<K>(iterators).first == std::get<K>(iterators).second
-        //     ));
-        //     if (n_ended == sizeof...(K)) return out;
-        //     else if (n_ended != 0) throw std::length_error(
-        //       "in map: container reached end before others");
-        //   }
-        //
-        //   out.push_back( std::invoke(
-        //     std::forward<F>(f), *std::get<K>(iterators).first ... ) );
-        //   ( ..., ++std::get<K>(iterators).first );
-        // }
+        if constexpr (Sizable<pack_element_t<0,C&...>>)
+          out.reserve(std::size(head_value(c...)));
+
+        for (;;) {
+          if constexpr (!!(flags & flags::no_dynamic_size_check)) {
+            if ((... || (
+              std::get<K>(iterators).first == std::get<K>(iterators).second
+            ))) return out;
+          } else {
+            const size_t n_ended = (... + (
+              std::get<K>(iterators).first == std::get<K>(iterators).second
+            ));
+            if (n_ended == sizeof...(K)) return out;
+            else if (n_ended != 0) throw std::length_error(
+              "in map: container reached end before others");
+          }
+
+          out.push_back( std::invoke(
+            std::forward<F>(f), *std::get<K>(iterators).first ... ) );
+          ( ..., ++std::get<K>(iterators).first );
+        }
       }
     }(dimensions{});
   }

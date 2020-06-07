@@ -156,10 +156,13 @@ int main(int argc, char* argv[]) {
   map(
     [](const auto&... x){ (cout << ... << x) << '\n'; },
     {1,2,3}, {'a','b','c'}, {"X","Y","Z"} );
-  show_type(map(
+
+  auto vec2 = map(
     [](const auto&... x){
       std::stringstream ss;
       (ss << ... << x);
       return ss.str();
-    }, {1,2,3}, {'a','b','c'}, {"X","Y","Z"} ));
+    }, {1,2,3}, {'a','b','c'}, {"X","Y","Z"} );
+  show_type(vec2);
+  map([](const auto& x){ cout << x << '\n'; },vec2);
 }
