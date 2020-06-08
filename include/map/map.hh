@@ -31,7 +31,7 @@ namespace impl {
 template <flags flags, typename F, typename... C>
 inline decltype(auto) map(F&& f, C&&... c) {
   using indices = container_index_sequence<C...>;
-  using dimensions = std::make_index_sequence<sizeof...(C)>;
+  using dimensions = make_indexed_type_sequence<C...>;
 
   static constexpr bool got_tuples = (... || Tuple<C>);
   static constexpr bool map_by_unfolding =
@@ -99,12 +99,11 @@ inline decltype(auto) map(F&& f, C&&... c) {
     // https://en.cppreference.com/w/cpp/language/eval_order   Rule 10
     return [&]<size_t... I>(std::index_sequence<I...>) {
       auto impl = [&]<size_t J>(index_constant<J>) -> decltype(auto) {
-        return [&]<size_t... Ks>(std::index_sequence<Ks...>) -> decltype(auto) {
+        return [&]<typename... D>(type_sequence<D...>) -> decltype(auto) {
           return std::invoke(
             std::forward<F>(f),
-            [&]<size_t K>(index_constant<K>) -> decltype(auto) {
+            [&]<typename _C, size_t K>(indexed_type<_C,K>) -> decltype(auto) {
               decltype(auto) iter = std::get<K>(iterators);
-              using _C = pack_element_t<K,C...>;
               if constexpr (Tuple<_C>) {
                 return std::get<J>(iter.value);
               } else {
@@ -119,7 +118,7 @@ inline decltype(auto) map(F&& f, C&&... c) {
                 ++it;
                 return x;
               }
-            }(index_constant<Ks>{}) ...
+            }(D{}) ...
           );
         }(dimensions{});
       };
@@ -145,24 +144,29 @@ inline decltype(auto) map(F&& f, C&&... c) {
       }
     }(indices{});
   } else { // map to vector
-    return [&]<size_t... K>(std::index_sequence<K...>) -> decltype(auto) {
+    auto reached_end = [&]<typename... D>(D...) -> bool {
+      if constexpr (!!(flags & flags::no_dynamic_size_check)) {
+        if ((... || (
+             std::get<D::index>(iterators).first
+          == std::get<D::index>(iterators).second
+        ))) return false;
+      } else {
+        const size_t n_ended = (... + (
+             std::get<D::index>(iterators).first
+          == std::get<D::index>(iterators).second
+        ));
+        if (n_ended == sizeof...(D)) return false;
+        else if (n_ended != 0) throw std::length_error(
+          "in map: container reached end before others");
+      }
+      return true;
+    };
+    return [&]<typename... D>(type_sequence<D...>) -> decltype(auto) {
       if constexpr ( ret.has_void ) {
-        for (;;) {
-          if constexpr (!!(flags & flags::no_dynamic_size_check)) {
-            if ((... || (
-              std::get<K>(iterators).first == std::get<K>(iterators).second
-            ))) return;
-          } else {
-            const size_t n_ended = (... + (
-              std::get<K>(iterators).first == std::get<K>(iterators).second
-            ));
-            if (n_ended == sizeof...(K)) return;
-            else if (n_ended != 0) throw std::length_error(
-              "in map: container reached end before others");
-          }
-
-          std::invoke( std::forward<F>(f), *std::get<K>(iterators).first ... );
-          ( ..., ++std::get<K>(iterators).first );
+        while (reached_end(D{}...)) {
+          std::invoke(
+            std::forward<F>(f), *std::get<D::index>(iterators).first ... );
+          ( ..., ++std::get<D::index>(iterators).first );
         }
       } else {
         // must create the vector with a lambda here
@@ -178,27 +182,15 @@ inline decltype(auto) map(F&& f, C&&... c) {
             >
           { return { }; }(result_types{});
 
-        if constexpr (Sizable<pack_element_t<0,C&...>>)
+        if constexpr (Sizable<pack_element_t<0,typename D::type&...>>)
           out.reserve(std::size(head_value(c...)));
 
-        for (;;) {
-          if constexpr (!!(flags & flags::no_dynamic_size_check)) {
-            if ((... || (
-              std::get<K>(iterators).first == std::get<K>(iterators).second
-            ))) return out;
-          } else {
-            const size_t n_ended = (... + (
-              std::get<K>(iterators).first == std::get<K>(iterators).second
-            ));
-            if (n_ended == sizeof...(K)) return out;
-            else if (n_ended != 0) throw std::length_error(
-              "in map: container reached end before others");
-          }
-
+        while (reached_end(D{}...)) {
           out.push_back( std::invoke(
-            std::forward<F>(f), *std::get<K>(iterators).first ... ) );
-          ( ..., ++std::get<K>(iterators).first );
+            std::forward<F>(f), *std::get<D::index>(iterators).first ... ) );
+          ( ..., ++std::get<D::index>(iterators).first );
         }
+        return out;
       }
     }(dimensions{});
   }
