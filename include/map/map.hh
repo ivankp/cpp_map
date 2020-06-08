@@ -28,10 +28,25 @@ constexpr bool enable_bitmask_operators<map::flags> = true;
 namespace ivanp::map {
 namespace impl {
 
+template <typename C>
+struct iterator_wrapper {
+  struct tuple {
+    C&& ref;
+    static constexpr bool is_tuple = true;
+  };
+  struct list {
+    std::decay_t<decltype(std::begin(std::declval<C&>()))> first;
+    std::decay_t<decltype(std::end  (std::declval<C&>()))> second;
+    bool operator!() const noexcept { return first == second; }
+    static constexpr bool is_tuple = false;
+    static constexpr bool has_size = Sizable<C&>;
+  };
+};
+
 template <flags flags, typename F, typename... C>
 inline decltype(auto) map(F&& f, C&&... c) {
   using indices = container_index_sequence<C...>;
-  using dimensions = make_indexed_type_sequence<C...>;
+  using dimensions = std::index_sequence_for<C...>;
 
   static constexpr bool got_tuples = (... || Tuple<C>);
   static constexpr bool map_by_unfolding =
@@ -89,8 +104,11 @@ inline decltype(auto) map(F&& f, C&&... c) {
   auto iterators = std::make_tuple(
     []<typename _C>(_C&& _c) {
       if constexpr (map_by_unfolding && Tuple<_C>)
-        return (struct { _C&& value; }){ std::forward<_C>(_c) };
-      else return std::make_pair( std::begin(_c), std::end(_c) );
+        return typename iterator_wrapper<_C>::tuple
+        { std::forward<_C>(_c) };
+      else
+        return typename iterator_wrapper<_C>::list
+        { std::begin(_c), std::end(_c) };
     }(std::forward<C>(c)) ...
   );
 
@@ -99,26 +117,27 @@ inline decltype(auto) map(F&& f, C&&... c) {
     // https://en.cppreference.com/w/cpp/language/eval_order   Rule 10
     return [&]<size_t... I>(std::index_sequence<I...>) {
       auto impl = [&]<size_t J>(index_constant<J>) -> decltype(auto) {
-        return [&]<typename... D>(type_sequence<D...>) -> decltype(auto) {
+        return [&]<size_t... Ks>(std::index_sequence<Ks...>) -> decltype(auto) {
           return std::invoke(
             std::forward<F>(f),
-            [&]<typename _C, size_t K>(indexed_type<_C,K>) -> decltype(auto) {
-              decltype(auto) iter = std::get<K>(iterators);
-              if constexpr (Tuple<_C>) {
-                return std::get<J>(iter.value);
+            [&]<typename Iter>(Iter&& iter) -> decltype(auto) {
+            using iter_t = std::remove_reference_t<Iter>;
+              if constexpr (iter_t::is_tuple) {
+                return std::get<J>(iter.ref);
               } else {
                 auto& it = iter.first;
                 if constexpr (
-                  !(flags & flags::no_dynamic_size_check) && !Sizable<_C>
+                  !(flags & flags::no_dynamic_size_check)
+                  && !iter_t::has_size
                 ) {
-                  if (it == iter.second) throw std::length_error(
+                  if (it == iter.end) throw std::length_error(
                     "in map: container reached end before others");
                 }
                 decltype(auto) x = *it;
                 ++it;
                 return x;
               }
-            }(D{}) ...
+            }(std::get<Ks>(iterators)) ...
           );
         }(dimensions{});
       };
@@ -144,29 +163,23 @@ inline decltype(auto) map(F&& f, C&&... c) {
       }
     }(indices{});
   } else { // map to vector
-    auto reached_end = [&]<typename... D>(D...) -> bool {
+    auto more = [&]<size_t... K>(index_constant<K>...) -> bool {
       if constexpr (!!(flags & flags::no_dynamic_size_check)) {
-        if ((... || (
-             std::get<D::index>(iterators).first
-          == std::get<D::index>(iterators).second
-        ))) return false;
+        if ((... || ( !std::get<K>(iterators) ))) return false;
       } else {
-        const size_t n_ended = (... + (
-             std::get<D::index>(iterators).first
-          == std::get<D::index>(iterators).second
-        ));
-        if (n_ended == sizeof...(D)) return false;
+        const size_t n_ended = (... + ( !std::get<K>(iterators) ));
+        if (n_ended == sizeof...(K)) return false;
         else if (n_ended != 0) throw std::length_error(
           "in map: container reached end before others");
       }
       return true;
     };
-    return [&]<typename... D>(type_sequence<D...>) -> decltype(auto) {
+    return [&]<size_t... K>(std::index_sequence<K...>) -> decltype(auto) {
       if constexpr ( ret.has_void ) {
-        while (reached_end(D{}...)) {
+        while (more(index_constant<K>{}...)) {
           std::invoke(
-            std::forward<F>(f), *std::get<D::index>(iterators).first ... );
-          ( ..., ++std::get<D::index>(iterators).first );
+            std::forward<F>(f), *std::get<K>(iterators).first ... );
+          ( ..., ++std::get<K>(iterators).first );
         }
       } else {
         // must create the vector with a lambda here
@@ -182,13 +195,17 @@ inline decltype(auto) map(F&& f, C&&... c) {
             >
           { return { }; }(result_types{});
 
-        if constexpr (Sizable<pack_element_t<0,typename D::type&...>>)
-          out.reserve(std::size(head_value(c...)));
+        ( ... || [&]<typename _C>(_C&& c){
+          if constexpr (Sizable<_C>) {
+            out.reserve(std::size(c));
+            return true;
+          } else return false;
+        }(c) );
 
-        while (reached_end(D{}...)) {
+        while (more(index_constant<K>{}...)) {
           out.push_back( std::invoke(
-            std::forward<F>(f), *std::get<D::index>(iterators).first ... ) );
-          ( ..., ++std::get<D::index>(iterators).first );
+            std::forward<F>(f), *std::get<K>(iterators).first ... ) );
+          ( ..., ++std::get<K>(iterators).first );
         }
         return out;
       }
