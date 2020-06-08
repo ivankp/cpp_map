@@ -163,8 +163,12 @@ inline decltype(auto) map(F&& f, C&&... c) {
       }
     }(indices{});
   } else { // map to vector
-    auto more = [&]<size_t... K>(index_constant<K>...) -> bool {
-      if constexpr (!!(flags & flags::no_dynamic_size_check)) {
+    auto not_done = [&]<size_t... K>(index_constant<K>...) -> bool {
+      if constexpr (
+        !!(flags & flags::no_dynamic_size_check)
+        || sizeof...(K) == 1
+        || (... && Sizable<C&>) // already checked
+      ) {
         if ((... || ( !std::get<K>(iterators) ))) return false;
       } else {
         const size_t n_ended = (... + ( !std::get<K>(iterators) ));
@@ -176,7 +180,7 @@ inline decltype(auto) map(F&& f, C&&... c) {
     };
     return [&]<size_t... K>(std::index_sequence<K...>) -> decltype(auto) {
       if constexpr ( ret.has_void ) {
-        while (more(index_constant<K>{}...)) {
+        while (not_done(index_constant<K>{}...)) {
           std::invoke(
             std::forward<F>(f), *std::get<K>(iterators).first ... );
           ( ..., ++std::get<K>(iterators).first );
@@ -202,7 +206,7 @@ inline decltype(auto) map(F&& f, C&&... c) {
           } else return false;
         }(c) );
 
-        while (more(index_constant<K>{}...)) {
+        while (not_done(index_constant<K>{}...)) {
           out.push_back( std::invoke(
             std::forward<F>(f), *std::get<K>(iterators).first ... ) );
           ( ..., ++std::get<K>(iterators).first );

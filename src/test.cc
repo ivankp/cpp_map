@@ -10,8 +10,6 @@
 #define TEST(var) \
   std::cout << "\033[36m" #var "\033[0m = " << (var) << std::endl;
 
-void show_type(auto&&) { std::cout << __PRETTY_FUNCTION__ << '\n'; }
-
 template <typename> struct test_type;
 
 #include "map/map.hh"
@@ -21,6 +19,10 @@ using std::endl;
 
 using namespace ivanp::map;
 using namespace ivanp::map::operators;
+
+auto print = [](const auto&... x){ (cout << ... << x) << '\n'; };
+
+void show_type(auto&&) { std::cout << __PRETTY_FUNCTION__ << '\n'; }
 
 template <List T>
 auto my_list_size(const T& x) {
@@ -133,8 +135,7 @@ int main(int argc, char* argv[]) {
   show_type(std::vector { 0, 1 }
     || [&](auto i) -> decltype(auto) { return std::move(vec[i]); });
 
-  map([](const auto&... x){ (cout << ... << x) << '\n'; },
-    std::tuple{1,2}, std::tuple{"a","b"} );
+  map( print, std::tuple{1,2}, std::tuple{"a","b"} );
   show_type(map(
     [](const auto&... x) -> decltype(auto) {
       return ((cout << ... << x) << '\n');
@@ -146,19 +147,15 @@ int main(int argc, char* argv[]) {
   show_type(map<flags::prefer_tuple>(
     [](auto... x){ return (... + x); }, std::array{1}, std::array{2} ));
 
-  map(
-    [](const auto&... x){ (cout << ... << x) << '\n'; },
-    std::array{1,2}, vec );
+  map( print, std::array{1,2}, vec );
 
   map([](auto...){ }); // map nothing
 
   map<flags::prefer_iteration | flags::no_size_check>(
-    [](const auto&... x){ (cout << ... << x) << '\n'; },
+    print,
     std::array{1,2,3}, vec );
 
-  map(
-    [](const auto&... x){ (cout << ... << x) << '\n'; },
-    {1,2,3}, {'a','b','c'}, {"X","Y","Z"} );
+  map( print, {1,2,3}, {'a','b','c'}, {"X","Y","Z"} );
 
   auto vec2 = map(
     [](const auto&... x){
@@ -167,5 +164,5 @@ int main(int argc, char* argv[]) {
       return ss.str();
     }, {1,2,3}, {'a','b','c'}, {"X","Y","Z"} );
   show_type(vec2);
-  map([](const auto& x){ cout << x << '\n'; },vec2);
+  vec2 | print;
 }
