@@ -6,17 +6,13 @@
 namespace ivanp::map {
 
 template <typename From, typename To>
-concept convertible_to =
-  std::is_convertible_v<From, To> &&
-  requires(std::add_rvalue_reference_t<From>(&f)()) {
-    static_cast<To>(f());
-  };
+concept convertible_to = std::is_convertible_v<From, To>;
 
 template <typename C>
 concept Tuple =
   requires {
     { std::tuple_size<std::remove_reference_t<C>>::value }
-      -> convertible_to<std::size_t>;
+      -> convertible_to<size_t>;
   };
 
 template <typename C>
@@ -38,7 +34,7 @@ concept Container = Iterable<C> || Tuple<C>;
 template <typename C>
 concept Sizable =
   requires(C& a) {
-    { std::size(a) } -> convertible_to<std::size_t>;
+    { std::size(a) } -> convertible_to<size_t>;
   };
 
 template <typename C>

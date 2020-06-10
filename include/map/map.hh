@@ -244,19 +244,19 @@ inline decltype(auto) map(F&& /*f*/) {
 namespace operators { // --------------------------------------------
 
 template <Container C, typename F>
-requires InvocableForElements<F&&,C>
+requires InvocableForElements<F&&,C&&>
 inline decltype(auto) operator|(C&& c, F&& f) {
   return impl::map<flags::none>(std::forward<F>(f),std::forward<C>(c));
 }
 
 template <Container C, typename F>
-requires InvocableForElements<F&&,C>
+requires InvocableForElements<F&&,C&&>
 inline decltype(auto) operator||(C&& c, F&& f) {
   return impl::map<flags::forward>(std::forward<F>(f),std::forward<C>(c));
 }
 
 template <Tuple C, typename F>
-requires Applyable<F&&,C>
+requires Applyable<F&&,C&&>
 inline constexpr decltype(auto) operator%(C&& c, F&& f) {
   return std::apply(std::forward<F>(f),std::forward<C>(c));
 }
