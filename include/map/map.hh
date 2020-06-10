@@ -4,6 +4,7 @@
 #include <functional>
 #include <array>
 #include <vector>
+#include <stdexcept>
 
 #include <map/concepts.hh>
 #include <enum_class_bitmask.hh>
@@ -53,29 +54,31 @@ inline decltype(auto) map(F&& f, C&&... c) {
     got_tuples &&
     !(!!(flags & flags::prefer_iteration) && (... && Iterable<C>));
 
-  if constexpr (!(flags & flags::no_static_size_check) && sizeof...(C)>1) {
-    (..., []<typename _C>(type_constant<_C>) {
-      static_assert(
-        !Tuple<_C> || indices::size() == container_size<_C>,
-        "tuples of unequal size given to map");
-    }(type_constant<C>{}));
-  }
-  if constexpr (!(flags & flags::no_dynamic_size_check) && sizeof...(C)>1) {
-    auto impl = [
-      first = !got_tuples,
-      s = indices::size()
-    ] <typename _C> (_C&& _c) mutable {
-      if constexpr (
-        Sizable<_C> && !(!(flags & flags::no_static_size_check) && Tuple<_C>)
-      ) {
-        if (first) {
-          first = false;
-          s = std::size(_c);
-        } else if (std::size(_c) != s)
-          throw std::length_error("containers of unequal size given to map");
-      }
-    };
-    (..., impl(c));
+  if constexpr (sizeof...(C) > 1) {
+    if constexpr (!(flags & flags::no_static_size_check)) {
+      (..., []<typename _C>(type_constant<_C>) {
+        static_assert(
+          !Tuple<_C> || indices::size() == container_size<_C>,
+          "tuples of unequal size given to map");
+      }(type_constant<C>{}));
+    }
+    if constexpr (!(flags & flags::no_dynamic_size_check)) {
+      auto impl = [
+        first = !got_tuples,
+        s = indices::size()
+      ] <typename _C> (_C&& _c) mutable {
+        if constexpr (
+          Sizable<_C> && !(!(flags & flags::no_static_size_check) && Tuple<_C>)
+        ) {
+          if (first) {
+            first = false;
+            s = std::size(_c);
+          } else if (std::size(_c) != s)
+            throw std::length_error("containers of unequal size given to map");
+        }
+      };
+      (..., impl(c));
+    }
   }
 
   using result_types =
@@ -127,11 +130,12 @@ inline decltype(auto) map(F&& f, C&&... c) {
               } else {
                 auto& it = iter.first;
                 if constexpr (
-                  !(flags & flags::no_dynamic_size_check)
+                  sizeof...(C)>1
+                  && !(flags & flags::no_dynamic_size_check)
                   && !iter_t::has_size
                 ) {
                   if (it == iter.end) throw std::length_error(
-                    "in map: container reached end before others");
+                    "in map: iterable ended before tuples");
                 }
                 decltype(auto) x = *it;
                 ++it;
