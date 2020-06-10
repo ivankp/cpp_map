@@ -95,9 +95,8 @@ inline decltype(auto) map(F&& f, C&&... c) {
 
   static constexpr auto ret =
     []<typename... T>(type_sequence<T...>) {
-      return (struct {
-        bool no_return, same, refs, constructible;
-      }) {
+      struct ret_t { bool no_return, same, refs, constructible; };
+      return ret_t {
         ((!!(flags & flags::no_return)) || ... || std::is_void_v<T>),
         are_same_v<T...>,
         (... || std::is_reference_v<T>),

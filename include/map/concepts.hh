@@ -1,8 +1,6 @@
 #ifndef IVANP_MAP_CONCEPTS_HH
 #define IVANP_MAP_CONCEPTS_HH
 
-#include <concepts>
-
 #include <map/traits.hh>
 
 namespace ivanp::map {
@@ -14,16 +12,23 @@ template <typename T>
 concept ConstSizable =
 // TODO: isn't working
   requires {
-    { T::size() } -> std::convertible_to<std::size_t>;
+    { T::size() } -> convertible_to<std::size_t>;
     typename require_constant<T::size()>;
   };
 */
+
+template <typename From, typename To>
+concept convertible_to =
+  std::is_convertible_v<From, To> &&
+  requires(std::add_rvalue_reference_t<From>(&f)()) {
+    static_cast<To>(f());
+  };
 
 template <typename C>
 concept Tuple =
   requires {
     { std::tuple_size<std::remove_reference_t<C>>::value }
-      -> std::convertible_to<std::size_t>;
+      -> convertible_to<std::size_t>;
   };
 
 template <typename C>
@@ -45,7 +50,7 @@ concept Container = Iterable<C> || Tuple<C>;
 template <typename C>
 concept Sizable =
   requires(C& a) {
-    { std::size(a) } -> std::convertible_to<std::size_t>;
+    { std::size(a) } -> convertible_to<std::size_t>;
   };
 
 template <typename C>
