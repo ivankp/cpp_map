@@ -101,6 +101,7 @@ concept Applyable = can_apply<F,C>;
 template <typename F, typename... C>
 constexpr bool is_invocable_for_elements =
   []<size_t... I>(std::index_sequence<I...>) {
+    [[maybe_unused]] // if map is passed an empty tuple
     auto impl = []<size_t J>(std::integral_constant<size_t,J>) {
       return Invocable<F,container_element_t<C,J>...>;
     };

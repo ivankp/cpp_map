@@ -9,6 +9,7 @@ using flags = ivanp::map::flags;
 
 int main(int argc, char* argv[]) {
   std::span(argv+1,argc-1) | [](auto x){ printf(x); };
+  // std::tuple{} | [](auto x){ printf(x); };
 
   /*
   map<

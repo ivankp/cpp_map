@@ -165,4 +165,6 @@ int main(int argc, char* argv[]) {
     }, {1,2,3}, {'a','b','c'}, {"X","Y","Z"} );
   show_type(vec2);
   vec2 | print;
+
+  map(print,std::tuple{},std::tuple{});
 }
