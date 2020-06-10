@@ -13,11 +13,12 @@ namespace ivanp::map {
 enum class flags {
   none = 0,
   forward = 1 << 0,
-  no_static_size_check  = 1 << 1,
-  no_dynamic_size_check = 1 << 2,
+  no_return = 1 << 1,
+  no_static_size_check  = 1 << 2,
+  no_dynamic_size_check = 1 << 3,
   no_size_check = no_static_size_check | no_dynamic_size_check,
-  prefer_tuple  = 1 << 3,
-  prefer_iteration = 1 << 4
+  prefer_tuple  = 1 << 4,
+  prefer_iteration = 1 << 5
 };
 }
 
@@ -95,9 +96,9 @@ inline decltype(auto) map(F&& f, C&&... c) {
   static constexpr auto ret =
     []<typename... T>(type_sequence<T...>) {
       return (struct {
-        bool has_void, same, refs, constructible;
+        bool no_return, same, refs, constructible;
       }) {
-        (... || std::is_void_v<T>),
+        ((!!(flags & flags::no_return)) || ... || std::is_void_v<T>),
         are_same_v<T...>,
         (... || std::is_reference_v<T>),
         (... || std::is_constructible_v<std::decay_t<T>,T>),
@@ -146,7 +147,7 @@ inline decltype(auto) map(F&& f, C&&... c) {
         }(dimensions{});
       };
 
-      if constexpr ( ret.has_void )
+      if constexpr ( ret.no_return )
         ( ..., impl(index_constant<I>{}) );
       else if constexpr (
         !(flags & flags::prefer_tuple) &&
@@ -183,7 +184,7 @@ inline decltype(auto) map(F&& f, C&&... c) {
       return true;
     };
     return [&]<size_t... K>(std::index_sequence<K...>) -> decltype(auto) {
-      if constexpr ( ret.has_void ) {
+      if constexpr ( ret.no_return ) {
         while (not_done(index_constant<K>{}...)) {
           std::invoke(
             std::forward<F>(f), *std::get<K>(iterators).first ... );
