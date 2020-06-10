@@ -5,18 +5,6 @@
 
 namespace ivanp::map {
 
-/*
-template <auto> struct require_constant;
-
-template <typename T>
-concept ConstSizable =
-// TODO: isn't working
-  requires {
-    { T::size() } -> convertible_to<std::size_t>;
-    typename require_constant<T::size()>;
-  };
-*/
-
 template <typename From, typename To>
 concept convertible_to =
   std::is_convertible_v<From, To> &&
