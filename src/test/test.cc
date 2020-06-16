@@ -12,7 +12,7 @@
 
 template <typename> struct test_type;
 
-#include "map/map.hh"
+#include "ivanp/map/map.hh"
 
 using std::cout;
 using std::endl;

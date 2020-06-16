@@ -1,7 +1,9 @@
 #ifndef IVANP_MAP_CONCEPTS_HH
 #define IVANP_MAP_CONCEPTS_HH
 
-#include <map/traits.hh>
+#include <tuple>
+#include <utility>
+#include <ivanp/traits.hh>
 
 namespace ivanp::map {
 

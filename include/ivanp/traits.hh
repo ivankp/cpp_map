@@ -2,10 +2,8 @@
 #define IVANP_MAP_TRAITS_HH
 
 #include <type_traits>
-#include <utility>
-#include <tuple>
 
-namespace ivanp::map {
+namespace ivanp {
 
 template <typename T>
 struct type_constant { using type = T; };

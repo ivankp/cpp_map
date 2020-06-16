@@ -6,8 +6,8 @@
 #include <vector>
 #include <stdexcept>
 
-#include <map/concepts.hh>
-#include <enum_class_bitmask.hh>
+#include <ivanp/map/concepts.hh>
+#include <ivanp/enum_class_bitmask.hh>
 
 namespace ivanp::map {
 enum class flags {

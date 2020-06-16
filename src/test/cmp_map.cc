@@ -1,7 +1,7 @@
 #include <span>
 #include <cstdio>
 
-#include "map/map.hh"
+#include "ivanp/map/map.hh"
 
 using ivanp::map::map;
 using namespace ivanp::map::operators;
